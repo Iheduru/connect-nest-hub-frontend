@@ -1,304 +1,285 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
-import { Camera, Loader2, User } from 'lucide-react';
-import { toast } from 'sonner';
-
-const profileSchema = yup.object({
-  phone_number: yup.string().nullable(),
-  alternative_email: yup.string().email('Please enter a valid email').nullable(),
-  middle_name: yup.string().nullable(),
-  bio: yup.string().nullable(),
-  gender: yup.string().nullable(),
-  address: yup.string().nullable(),
-  city: yup.string().nullable(),
-  state: yup.string().nullable(),
-  country: yup.string().nullable(),
-});
-
-type ProfileFormData = {
-  phone_number: string | null;
-  alternative_email: string | null;
-  middle_name: string | null;
-  bio: string | null;
-  gender: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-};
+import { ProfileFormData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 const ProfilePage = () => {
+  const { toast } = useToast();
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const { profile, isLoading } = useSelector((state: RootState) => state.profile);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ProfileFormData>({
-    resolver: yupResolver(profileSchema),
+  const schema = yup.object({
+    middle_name: yup.string().optional(),
+    phone_number: yup.string().required('Phone number is required'),
+    alternative_email: yup.string().email('Invalid email format').optional(),
+    bio: yup.string().optional(),
+    gender: yup.string().optional(),
+    address: yup.string().optional(),
+    city: yup.string().optional(),
+    state: yup.string().optional(),
+    country: yup.string().optional(),
+  }).required();
+
+  const form = useForm<ProfileFormData>({
+    resolver: yupResolver(schema),
     defaultValues: {
-      phone_number: null,
-      alternative_email: null,
-      middle_name: null,
-      bio: null,
-      gender: null,
-      address: null,
-      city: null,
-      state: null,
-      country: null,
+      middle_name: profile?.middle_name || user?.middle_name || '',
+      phone_number: profile?.phone_number || '',
+      alternative_email: profile?.alternative_email || '',
+      bio: profile?.bio || '',
+      gender: profile?.gender || '',
+      address: profile?.address || '',
+      city: profile?.city || '',
+      state: profile?.state || '',
+      country: profile?.country || '',
     },
   });
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (profileImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(profileImage);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [profileImage]);
 
-    // Mock image upload
-    setUploadingImage(true);
-    // Simulating upload delay
-    setTimeout(() => {
-      setProfileImage(URL.createObjectURL(file));
-      setUploadingImage(false);
-      toast.success('Profile image uploaded successfully');
-    }, 1500);
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+    }
   };
 
-  const onSubmit = (data: ProfileFormData) => {
-    setLoading(true);
-    // Mock API call
-    setTimeout(() => {
+  const onSubmit = async (data: ProfileFormData) => {
+    try {
+      // Simulate API call
       console.log('Profile data:', data);
-      toast.success('Profile updated successfully');
-      setLoading(false);
-    }, 1500);
+      console.log('Profile image:', profileImage);
+      toast({
+        title: 'Profile updated successfully',
+        description: 'Your profile has been updated.',
+      });
+    } catch (error: any) {
+      setServerError('Failed to update profile. Please try again.');
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and profile information
-        </p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-4">
-        {/* Profile Sidebar */}
-        <div className="md:col-span-1">
-          <div className="flex flex-col items-center space-y-4 bg-white p-6 rounded-lg border shadow-sm">
-            <div className="relative">
-              <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
-                ) : (
-                  <User className="h-12 w-12 text-gray-500" />
-                )}
-                {uploadingImage && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-white animate-spin" />
-                  </div>
-                )}
-              </div>
-              <label htmlFor="profile-image" className="absolute bottom-0 right-0 bg-brand-primary text-white p-1 rounded-full cursor-pointer">
-                <Camera className="h-4 w-4" />
-                <input
-                  id="profile-image"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage}
-                />
-              </label>
+    <div className="container mx-auto px-4 py-8 animate-fade-in">
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>Update your profile information here.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          {serverError && (
+            <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
+              {serverError}
             </div>
-            <div className="text-center">
-              <h3 className="font-medium">{user?.first_name} {user?.last_name}</h3>
-              <p className="text-sm text-muted-foreground">@{user?.username}</p>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+          )}
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16">
+              {previewUrl ? (
+                <AvatarImage src={previewUrl} alt="Profile Preview" />
+              ) : user?.profile_picture ? (
+                <AvatarImage src={user.profile_picture} alt={user.username} />
+              ) : (
+                <AvatarFallback>{user?.first_name?.[0]}{user?.last_name?.[0]}</AvatarFallback>
+              )}
+            </Avatar>
+            <div>
+              <Form {...form}>
+                <form className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="profile_picture"
+                    render={() => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            id="profile_picture"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <FormLabel htmlFor="profile_picture" className="cursor-pointer hover:underline text-sm text-muted-foreground">
+                          {profileImage ? 'Change Profile Image' : 'Upload Profile Image'}
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
             </div>
           </div>
-        </div>
-
-        {/* Profile Form */}
-        <div className="md:col-span-3 bg-white p-6 rounded-lg border shadow-sm">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Personal Information</h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="form-input-group">
-                  <label htmlFor="middle_name" className="form-label">
-                    Middle Name
-                  </label>
-                  <input
-                    id="middle_name"
-                    type="text"
-                    {...register('middle_name')}
-                    className="form-input"
-                    placeholder="Enter your middle name (optional)"
-                    disabled={loading}
-                  />
-                  {errors.middle_name && (
-                    <p className="form-error">{errors.middle_name.message}</p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="middle_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Middle Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your middle name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-
-                <div className="form-input-group">
-                  <label htmlFor="phone_number" className="form-label">
-                    Phone Number
-                  </label>
-                  <input
-                    id="phone_number"
-                    type="tel"
-                    {...register('phone_number')}
-                    className="form-input"
-                    placeholder="Enter your phone number"
-                    disabled={loading}
-                  />
-                  {errors.phone_number && (
-                    <p className="form-error">{errors.phone_number.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-input-group">
-                <label htmlFor="alternative_email" className="form-label">
-                  Alternative Email
-                </label>
-                <input
-                  id="alternative_email"
-                  type="email"
-                  {...register('alternative_email')}
-                  className={`form-input ${errors.alternative_email ? 'border-red-500' : ''}`}
-                  placeholder="Enter an alternative email (optional)"
-                  disabled={loading}
                 />
-                {errors.alternative_email && (
-                  <p className="form-error">{errors.alternative_email.message}</p>
-                )}
-              </div>
-
-              <div className="form-input-group">
-                <label htmlFor="gender" className="form-label">
-                  Gender
-                </label>
-                <select
-                  id="gender"
-                  {...register('gender')}
-                  className="form-input"
-                  disabled={loading}
-                >
-                  <option value="">Select gender (optional)</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-              </div>
-
-              <div className="form-input-group">
-                <label htmlFor="bio" className="form-label">
-                  Bio
-                </label>
-                <textarea
-                  id="bio"
-                  {...register('bio')}
-                  className="form-input min-h-[100px]"
-                  placeholder="Tell us about yourself (optional)"
-                  disabled={loading}
-                ></textarea>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Address Information</h3>
-              
-              <div className="form-input-group">
-                <label htmlFor="address" className="form-label">
-                  Address
-                </label>
-                <input
-                  id="address"
-                  type="text"
-                  {...register('address')}
-                  className="form-input"
-                  placeholder="Enter your street address (optional)"
-                  disabled={loading}
+                <FormField
+                  control={form.control}
+                  name="phone_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your phone number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="form-input-group">
-                  <label htmlFor="city" className="form-label">
-                    City
-                  </label>
-                  <input
-                    id="city"
-                    type="text"
-                    {...register('city')}
-                    className="form-input"
-                    placeholder="City"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-input-group">
-                  <label htmlFor="state" className="form-label">
-                    State/Province
-                  </label>
-                  <input
-                    id="state"
-                    type="text"
-                    {...register('state')}
-                    className="form-input"
-                    placeholder="State/Province"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-input-group">
-                  <label htmlFor="country" className="form-label">
-                    Country
-                  </label>
-                  <input
-                    id="country"
-                    type="text"
-                    {...register('country')}
-                    className="form-input"
-                    placeholder="Country"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Saving...
-                  </span>
-                ) : (
-                  'Save Changes'
+              <FormField
+                control={form.control}
+                name="alternative_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alternative Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your alternative email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+              />
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Write a short bio about yourself" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your city" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your state" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your country" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update Profile'}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

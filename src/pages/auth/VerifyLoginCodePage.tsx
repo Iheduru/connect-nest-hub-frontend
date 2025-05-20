@@ -1,176 +1,133 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { verifyLoginCode, resendLoginCode } from '@/store/slices/authSlice';
-import { AppDispatch } from '@/store';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
-
-const verifyLoginCodeSchema = yup.object({
-  user_id: yup.number().required('User ID is required'),
-  verification_code: yup.string().required('Verification code is required').length(8, 'Verification code must be 8 digits'),
-});
-
-type VerifyLoginCodeFormData = {
-  user_id: number;
-  verification_code: string;
-};
+import { RootState } from '@/store';
+import { VerifyLoginCodeFormData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 const VerifyLoginCodePage = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const dispatch = useDispatch<AppDispatch>();
-  
-  const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  
-  // Get user_id from state
-  const userId = location.state?.userId;
-  
-  useEffect(() => {
-    // If no userId in state, redirect to login
-    if (!userId) {
-      navigate('/login');
-    }
-  }, [userId, navigate]);
+  const dispatch = useDispatch();
+  const { tempUserId, isLoading, error } = useSelector((state: RootState) => state.auth);
+  const [isResending, setIsResending] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<VerifyLoginCodeFormData>({
-    resolver: yupResolver(verifyLoginCodeSchema),
+  // Redirect if no user ID in state
+  if (!tempUserId) {
+    navigate('/login');
+    return null;
+  }
+
+  const schema = yup.object({
+    user_id: yup.number().required('User ID is required'),
+    verification_code: yup.string()
+      .required('Verification code is required')
+      .length(8, 'Verification code must be 8 digits')
+      .matches(/^[0-9]+$/, 'Verification code must contain only numbers'),
+  }).required();
+
+  const form = useForm<VerifyLoginCodeFormData>({
+    resolver: yupResolver(schema),
     defaultValues: {
-      user_id: userId || 0,
+      user_id: tempUserId,
+      verification_code: '',
     },
   });
-  
-  // Set user_id from state
-  useEffect(() => {
-    if (userId) {
-      setValue('user_id', userId);
-    }
-  }, [userId, setValue]);
-  
-  // Handle resend cooldown
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => {
-        setResendCooldown(resendCooldown - 1);
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [resendCooldown]);
 
   const onSubmit = async (data: VerifyLoginCodeFormData) => {
-    if (!userId) return;
-    
-    setLoading(true);
     try {
-      await dispatch(verifyLoginCode(data)).unwrap();
-      toast.success('Login verified successfully');
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Verification error:', error);
-      // Toast notification is handled in the thunk
-    } finally {
-      setLoading(false);
+      const resultAction = await dispatch(verifyLoginCode(data));
+
+      if (verifyLoginCode.fulfilled.match(resultAction)) {
+        toast({
+          title: 'Login successful',
+          description: 'Your login code has been verified.',
+        });
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      setServerError('Verification failed. Please try again.');
     }
   };
 
   const handleResendCode = async () => {
-    if (resendCooldown > 0 || !userId) return;
-    
-    setResendLoading(true);
+    setIsResending(true);
     try {
-      await dispatch(resendLoginCode(userId)).unwrap();
-      setResendCooldown(60); // 60 seconds cooldown
-      toast.success('A new verification code has been sent to your email');
-    } catch (error) {
-      console.error('Resend error:', error);
-      // Toast notification is handled in the thunk
+      if (tempUserId) {
+        await dispatch(resendLoginCode(tempUserId));
+        toast({
+          title: 'Verification code resent',
+          description: 'A new verification code has been sent to your email.',
+        });
+      }
+    } catch (err) {
+      setServerError('Failed to resend verification code. Please try again.');
     } finally {
-      setResendLoading(false);
+      setIsResending(false);
     }
   };
 
   return (
-    <div>
+    <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
       <div className="text-center mb-6">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary bg-opacity-10 mb-4">
-          <ShieldCheck className="h-6 w-6 text-brand-primary" />
-        </div>
-        <h2 className="text-xl font-semibold text-gray-900">Verify Login</h2>
-        <p className="text-gray-600 mt-1">
-          For security reasons, we've sent a verification code to your email address.
+        <h1 className="text-2xl font-bold">Verify Login Code</h1>
+        <p className="text-muted-foreground mt-2">
+          Enter the 8-digit code sent to your email to complete the login process.
         </p>
       </div>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <input
-          type="hidden"
-          {...register('user_id')}
-        />
-        
-        <div className="form-input-group">
-          <label htmlFor="verification_code" className="form-label">
-            Verification Code
-          </label>
-          <input
-            id="verification_code"
-            type="text"
-            {...register('verification_code')}
-            className={`form-input ${errors.verification_code ? 'border-red-500' : ''}`}
-            placeholder="Enter 8-digit code"
-            disabled={loading}
-          />
-          {errors.verification_code && (
-            <p className="form-error">{errors.verification_code.message}</p>
-          )}
+
+      {(error || serverError) && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
+          {error || serverError}
         </div>
-        
-        <div>
-          <button
-            type="submit"
-            className="w-full btn-primary"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Verifying...
-              </span>
-            ) : (
-              'Verify Code'
+      )}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="verification_code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Verification Code</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter your verification code"
+                    {...field}
+                    type="number"
+                    minLength={8}
+                    maxLength={8}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </button>
-        </div>
-      </form>
-      
-      <div className="mt-4 text-center">
-        <p className="text-sm text-gray-600">
-          Didn't receive the code?{' '}
-          <button
-            type="button"
-            onClick={handleResendCode}
-            className={`text-brand-primary font-medium ${
-              resendCooldown > 0 || resendLoading ? 'opacity-50 cursor-not-allowed' : 'hover:text-brand-primary/80'
-            }`}
-            disabled={resendCooldown > 0 || resendLoading}
-          >
-            {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
-          </button>
-        </p>
-      </div>
+          />
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Verifying...' : 'Verify Code'}
+          </Button>
+
+          <div className="text-center mt-4">
+            <Button
+              type="button"
+              variant="link"
+              onClick={handleResendCode}
+              disabled={isResending}
+            >
+              {isResending ? 'Resending...' : 'Resend Code'}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };

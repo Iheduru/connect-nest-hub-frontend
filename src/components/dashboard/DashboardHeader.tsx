@@ -1,19 +1,28 @@
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { logout } from '@/store/slices/authSlice';
-import { Menu, User, Bell, LogOut } from 'lucide-react';
+import { Bell, LogOut, Menu, Settings, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-interface DashboardHeaderProps {
-  onToggleSidebar: () => void;
-}
-
-const DashboardHeader = ({ onToggleSidebar }: DashboardHeaderProps) => {
+const DashboardHeader = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const { user } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
+    navigate('/login');
   };
 
   return (

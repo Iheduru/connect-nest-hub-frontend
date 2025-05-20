@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Building, Home, Office, Category, Grid, List, Filter } from 'lucide-react';
+import { Building, Home, Store, Filter, Grid, List } from 'lucide-react';
 import { 
   Tabs, 
   TabsContent, 
@@ -192,7 +192,7 @@ const PropertiesPage = () => {
                 Buy
               </TabsTrigger>
               <TabsTrigger value="lease" className="flex items-center gap-1">
-                <Office className="h-4 w-4" />
+                <Store className="h-4 w-4" />
                 Lease
               </TabsTrigger>
             </TabsList>
@@ -201,7 +201,7 @@ const PropertiesPage = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <Category className="h-4 w-4" />
+                    <Filter className="h-4 w-4" />
                     Property Type
                   </Button>
                 </DropdownMenuTrigger>
@@ -242,7 +242,7 @@ const PropertiesPage = () => {
               </div>
             ) : (
               <div className={`grid gap-6 ${viewMode === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {filteredProperties.map((property, index) => (
+                {filteredProperties.map((property) => (
                   <PropertyCard 
                     key={property.id} 
                     property={property} 
@@ -259,7 +259,7 @@ const PropertiesPage = () => {
               </div>
             ) : (
               <div className={`grid gap-6 ${viewMode === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {filteredProperties.map((property, index) => (
+                {filteredProperties.map((property) => (
                   <PropertyCard 
                     key={property.id} 
                     property={property} 
@@ -276,7 +276,7 @@ const PropertiesPage = () => {
               </div>
             ) : (
               <div className={`grid gap-6 ${viewMode === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {filteredProperties.map((property, index) => (
+                {filteredProperties.map((property) => (
                   <PropertyCard 
                     key={property.id} 
                     property={property} 
@@ -293,7 +293,7 @@ const PropertiesPage = () => {
               </div>
             ) : (
               <div className={`grid gap-6 ${viewMode === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                {filteredProperties.map((property, index) => (
+                {filteredProperties.map((property) => (
                   <PropertyCard 
                     key={property.id} 
                     property={property} 

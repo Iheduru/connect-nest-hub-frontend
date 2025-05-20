@@ -1,55 +1,60 @@
-
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Lock, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import axios from 'axios';
-
-const resetPasswordSchema = yup.object({
-  token: yup.string().required('Verification code is required').length(8, 'Code must be 8 characters'),
-  password: yup.string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .matches(/[0-9]/, 'Password must contain at least one number')
-    .matches(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  password_confirmation: yup.string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords must match'),
-});
-
-type ResetPasswordFormData = {
-  token: string;
-  password: string;
-  password_confirmation: string;
-};
+import { useDispatch } from 'react-redux';
+import { resetPassword } from '@/store/slices/authSlice';
+import { ResetPasswordFormData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 const ResetPasswordPage = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ResetPasswordFormData>({
-    resolver: yupResolver(resetPasswordSchema),
+  useEffect(() => {
+    if (!token) {
+      navigate('/forgot-password');
+    }
+  }, [token, navigate]);
+
+  const schema = yup.object({
+    token: yup.string().required('Token is required'),
+    password: yup.string()
+      .required('Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .matches(/(?=.*[A-Z])/, 'Password must contain at least one uppercase letter')
+      .matches(/(?=.*[a-z])/, 'Password must contain at least one lowercase letter')
+      .matches(/(?=.*[0-9])/, 'Password must contain at least one number')
+      .matches(/(?=.*[!@#$%^&*])/, 'Password must contain at least one special character'),
+    password_confirmation: yup.string()
+      .required('Password confirmation is required')
+      .oneOf([yup.ref('password')], 'Passwords must match'),
+  }).required();
+
+  const form = useForm<ResetPasswordFormData>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      token: token,
+      password: '',
+      password_confirmation: '',
+    },
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       // Replace with actual API endpoint
-      await axios.post('https://namph.connectnesthub.com/api/reset/password', {
-        token: data.token,
-        password: data.password,
-        password_confirmation: data.password_confirmation,
-      });
+      await dispatch(resetPassword(data));
       
       setResetSuccess(true);
       toast.success('Password has been reset successfully');
@@ -62,7 +67,7 @@ const ResetPasswordPage = () => {
       const errorMessage = error.response?.data?.message || 'Failed to reset password';
       toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -92,7 +97,7 @@ const ResetPasswordPage = () => {
         Reset Your Password
       </h2>
       
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="form-input-group">
           <label htmlFor="token" className="form-label">
             Verification Code
@@ -100,13 +105,13 @@ const ResetPasswordPage = () => {
           <input
             id="token"
             type="text"
-            {...register('token')}
-            className={`form-input ${errors.token ? 'border-red-500' : ''}`}
+            {...form.register('token')}
+            className={`form-input ${form.errors.token ? 'border-red-500' : ''}`}
             placeholder="Enter 8-digit code"
-            disabled={loading}
+            disabled={isSubmitting}
           />
-          {errors.token && (
-            <p className="form-error">{errors.token.message}</p>
+          {form.errors.token && (
+            <p className="form-error">{form.errors.token.message}</p>
           )}
         </div>
 
@@ -121,14 +126,14 @@ const ResetPasswordPage = () => {
             <input
               id="password"
               type="password"
-              {...register('password')}
-              className={`form-input pl-10 ${errors.password ? 'border-red-500' : ''}`}
+              {...form.register('password')}
+              className={`form-input pl-10 ${form.errors.password ? 'border-red-500' : ''}`}
               placeholder="Enter your new password"
-              disabled={loading}
+              disabled={isSubmitting}
             />
           </div>
-          {errors.password && (
-            <p className="form-error">{errors.password.message}</p>
+          {form.errors.password && (
+            <p className="form-error">{form.errors.password.message}</p>
           )}
         </div>
 
@@ -143,14 +148,14 @@ const ResetPasswordPage = () => {
             <input
               id="password_confirmation"
               type="password"
-              {...register('password_confirmation')}
-              className={`form-input pl-10 ${errors.password_confirmation ? 'border-red-500' : ''}`}
+              {...form.register('password_confirmation')}
+              className={`form-input pl-10 ${form.errors.password_confirmation ? 'border-red-500' : ''}`}
               placeholder="Confirm your new password"
-              disabled={loading}
+              disabled={isSubmitting}
             />
           </div>
-          {errors.password_confirmation && (
-            <p className="form-error">{errors.password_confirmation.message}</p>
+          {form.errors.password_confirmation && (
+            <p className="form-error">{form.errors.password_confirmation.message}</p>
           )}
         </div>
 
@@ -158,9 +163,9 @@ const ResetPasswordPage = () => {
           <button
             type="submit"
             className="w-full btn-primary"
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? (
+            {isSubmitting ? (
               <span className="flex items-center justify-center">
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 Resetting...

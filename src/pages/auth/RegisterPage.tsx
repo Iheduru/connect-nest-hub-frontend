@@ -1,359 +1,236 @@
-
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { registerSchema } from '@/utils/validation';
-import { useDispatch, useSelector } from 'react-redux';
-import { register as registerUser } from '@/store/slices/authSlice';
-import { RootState, AppDispatch } from '@/store';
-import { CheckCircle, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import axios from 'axios';
-
-type RegisterFormData = {
-  username: string;
-  email: string;
-  first_name: string;
-  middle_name?: string;
-  last_name: string;
-  password: string;
-  password_confirmation: string;
-  role: 'client' | 'host' | 'admin';
-};
+import * as yup from 'yup';
+import { useDispatch } from 'react-redux';
+import { register } from '@/store/slices/authSlice';
+import { RegisterFormData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Link } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const RegisterPage = () => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
-  
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-  
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: yupResolver(registerSchema),
+  const dispatch = useDispatch();
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = yup.object({
+    username: yup.string()
+      .required('Username is required')
+      .min(3, 'Username must be at least 3 characters')
+      .matches(/^[a-zA-Z][a-zA-Z0-9_]*$/, 'Username cannot start with a number and can only contain letters, numbers, and underscores'),
+    first_name: yup.string()
+      .required('First name is required')
+      .matches(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+    last_name: yup.string()
+      .required('Last name is required')
+      .matches(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+    middle_name: yup.string()
+      .matches(/^[a-zA-Z\s'-]*$/, 'Middle name can only contain letters, spaces, hyphens, and apostrophes'),
+    email: yup.string().required('Email is required').email('Invalid email format'),
+    password: yup.string()
+      .required('Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .matches(/(?=.*[A-Z])/, 'Password must contain at least one uppercase letter')
+      .matches(/(?=.*[a-z])/, 'Password must contain at least one lowercase letter')
+      .matches(/(?=.*[0-9])/, 'Password must contain at least one number')
+      .matches(/(?=.*[!@#$%^&*])/, 'Password must contain at least one special character'),
+    password_confirmation: yup.string()
+      .required('Password confirmation is required')
+      .oneOf([yup.ref('password')], 'Passwords must match'),
+    role: yup.string().oneOf(['client', 'host', 'admin'], 'Invalid role'),
+  }).required();
+
+  const form = useForm<RegisterFormData>({
+    resolver: yupResolver(schema),
     defaultValues: {
+      username: '',
+      first_name: '',
+      last_name: '',
+      middle_name: '',
+      email: '',
+      password: '',
+      password_confirmation: '',
       role: 'client',
     },
   });
 
-  const username = watch('username');
-  const email = watch('email');
-
-  // Check username availability
-  const checkUsername = async (username: string) => {
-    if (!username || username.length < 3) {
-      setUsernameAvailable(null);
-      return;
-    }
-    
-    try {
-      setCheckingUsername(true);
-      const response = await axios.post('https://namph.connectnesthub.com/api/check/username', {
-        usernames: [username],
-      });
-      
-      setUsernameAvailable(response.data.data.available.includes(username));
-      setCheckingUsername(false);
-    } catch (error) {
-      setUsernameAvailable(null);
-      setCheckingUsername(false);
-    }
-  };
-
-  // Check email availability
-  const checkEmail = async (email: string) => {
-    if (!email || !email.includes('@')) {
-      setEmailAvailable(null);
-      return;
-    }
-    
-    try {
-      setCheckingEmail(true);
-      const response = await axios.post('https://namph.connectnesthub.com/api/check/email', {
-        emails: [email],
-      });
-      
-      setEmailAvailable(response.data.data.available.includes(email));
-      setCheckingEmail(false);
-    } catch (error) {
-      setEmailAvailable(null);
-      setCheckingEmail(false);
-    }
-  };
-
-  // Debounced version of check functions
-  const debouncedCheckUsername = (username: string) => {
-    if (usernameTimeout) clearTimeout(usernameTimeout);
-    usernameTimeout = setTimeout(() => checkUsername(username), 500);
-  };
-
-  const debouncedCheckEmail = (email: string) => {
-    if (emailTimeout) clearTimeout(emailTimeout);
-    emailTimeout = setTimeout(() => checkEmail(email), 500);
-  };
-
-  // Set up timeouts for debounce
-  let usernameTimeout: ReturnType<typeof setTimeout>;
-  let emailTimeout: ReturnType<typeof setTimeout>;
-
-  // Handle username change
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    debouncedCheckUsername(value);
-  };
-
-  // Handle email change
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    debouncedCheckEmail(value);
-  };
-
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const result = await dispatch(registerUser(data)).unwrap();
-      // If successful, navigate to verify email page with email in state
-      navigate('/verify-email', { state: { email: data.email } });
-    } catch (error: any) {
-      // The toast is already shown in the async thunk
-      console.error('Registration error:', error);
+      const resultAction = await dispatch(register(data));
+
+      if (register.fulfilled.match(resultAction)) {
+        toast({
+          title: 'Registration successful',
+          description: 'You have successfully registered. Please check your email to verify your account.',
+        });
+        navigate('/login');
+      }
+    } catch (err) {
+      setServerError('Registration failed. Please try again.');
     }
   };
 
   return (
-    <div>
-      <h2 className="text-center text-xl font-bold text-gray-900 mb-6">
-        Create your account
-      </h2>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Username field */}
-        <div className="form-input-group">
-          <label htmlFor="username" className="form-label">
-            Username
-          </label>
-          <div className="relative">
-            <input
-              id="username"
-              type="text"
-              {...register('username')}
-              onChange={(e) => {
-                register('username').onChange(e);
-                handleUsernameChange(e);
-              }}
-              className={`form-input pr-10 ${errors.username ? 'border-red-500' : ''}`}
-              placeholder="Enter your username"
-              disabled={loading}
-            />
-            {checkingUsername ? (
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-              </span>
-            ) : (
-              usernameAvailable !== null && (
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  {usernameAvailable ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
-                </span>
-              )
-            )}
-          </div>
-          {errors.username && (
-            <p className="form-error">{errors.username.message}</p>
-          )}
-          {!errors.username && !usernameAvailable && usernameAvailable !== null && (
-            <p className="form-error">Username is already taken</p>
-          )}
-        </div>
-
-        {/* Email field */}
-        <div className="form-input-group">
-          <label htmlFor="email" className="form-label">
-            Email
-          </label>
-          <div className="relative">
-            <input
-              id="email"
-              type="email"
-              {...register('email')}
-              onChange={(e) => {
-                register('email').onChange(e);
-                handleEmailChange(e);
-              }}
-              className={`form-input pr-10 ${errors.email ? 'border-red-500' : ''}`}
-              placeholder="Enter your email"
-              disabled={loading}
-            />
-            {checkingEmail ? (
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-              </span>
-            ) : (
-              emailAvailable !== null && (
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  {emailAvailable ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
-                </span>
-              )
-            )}
-          </div>
-          {errors.email && (
-            <p className="form-error">{errors.email.message}</p>
-          )}
-          {!errors.email && !emailAvailable && emailAvailable !== null && (
-            <p className="form-error">Email is already registered</p>
-          )}
-        </div>
-
-        {/* First Name field */}
-        <div className="form-input-group">
-          <label htmlFor="first_name" className="form-label">
-            First Name
-          </label>
-          <input
-            id="first_name"
-            type="text"
-            {...register('first_name')}
-            className={`form-input ${errors.first_name ? 'border-red-500' : ''}`}
-            placeholder="Enter your first name"
-            disabled={loading}
-          />
-          {errors.first_name && (
-            <p className="form-error">{errors.first_name.message}</p>
-          )}
-        </div>
-
-        {/* Middle Name field */}
-        <div className="form-input-group">
-          <label htmlFor="middle_name" className="form-label">
-            Middle Name (Optional)
-          </label>
-          <input
-            id="middle_name"
-            type="text"
-            {...register('middle_name')}
-            className={`form-input ${errors.middle_name ? 'border-red-500' : ''}`}
-            placeholder="Enter your middle name"
-            disabled={loading}
-          />
-          {errors.middle_name && (
-            <p className="form-error">{errors.middle_name.message}</p>
-          )}
-        </div>
-
-        {/* Last Name field */}
-        <div className="form-input-group">
-          <label htmlFor="last_name" className="form-label">
-            Last Name
-          </label>
-          <input
-            id="last_name"
-            type="text"
-            {...register('last_name')}
-            className={`form-input ${errors.last_name ? 'border-red-500' : ''}`}
-            placeholder="Enter your last name"
-            disabled={loading}
-          />
-          {errors.last_name && (
-            <p className="form-error">{errors.last_name.message}</p>
-          )}
-        </div>
-
-        {/* Password field */}
-        <div className="form-input-group">
-          <label htmlFor="password" className="form-label">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            {...register('password')}
-            className={`form-input ${errors.password ? 'border-red-500' : ''}`}
-            placeholder="Enter your password"
-            disabled={loading}
-          />
-          {errors.password && (
-            <p className="form-error">{errors.password.message}</p>
-          )}
-        </div>
-
-        {/* Password Confirmation field */}
-        <div className="form-input-group">
-          <label htmlFor="password_confirmation" className="form-label">
-            Confirm Password
-          </label>
-          <input
-            id="password_confirmation"
-            type="password"
-            {...register('password_confirmation')}
-            className={`form-input ${errors.password_confirmation ? 'border-red-500' : ''}`}
-            placeholder="Confirm your password"
-            disabled={loading}
-          />
-          {errors.password_confirmation && (
-            <p className="form-error">{errors.password_confirmation.message}</p>
-          )}
-        </div>
-
-        {/* Role selection */}
-        <div className="form-input-group">
-          <label htmlFor="role" className="form-label">
-            Account Type
-          </label>
-          <select
-            id="role"
-            {...register('role')}
-            className={`form-input ${errors.role ? 'border-red-500' : ''}`}
-            disabled={loading}
-          >
-            <option value="client">Client</option>
-            <option value="host">Host</option>
-          </select>
-          {errors.role && (
-            <p className="form-error">{errors.role.message}</p>
-          )}
-        </div>
-
-        {/* Submit button */}
-        <div>
-          <button
-            type="submit"
-            className="w-full btn-primary"
-            disabled={loading || checkingEmail || checkingUsername}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Creating account...
-              </span>
-            ) : (
-              'Create Account'
-            )}
-          </button>
-        </div>
-      </form>
-
-      <div className="mt-4 text-center">
-        <p className="text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="text-brand-primary font-medium hover:text-brand-primary/80">
-            Log in
-          </Link>
-        </p>
+    <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold">Create an Account</h1>
+        <p className="text-muted-foreground mt-2">Enter your details to register a new account</p>
       </div>
+
+      {serverError && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
+          {serverError}
+        </div>
+      )}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Username</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your username" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your first name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your last name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="middle_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Middle Name (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your middle name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="Enter your email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="Enter your password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password_confirmation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="Confirm your password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="client">Client</SelectItem>
+                    <SelectItem value="host">Host</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button type="submit" className="w-full">
+            Register
+          </Button>
+
+          <div className="text-center mt-4">
+            <p>
+              Already have an account?{' '}
+              <Link to="/login" className="text-primary hover:underline">
+                Login
+              </Link>
+            </p>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };

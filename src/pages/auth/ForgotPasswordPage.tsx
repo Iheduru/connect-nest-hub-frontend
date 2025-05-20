@@ -1,126 +1,103 @@
-
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Mail } from 'lucide-react';
-import { toast } from 'sonner';
-import axios from 'axios';
-
-const forgotPasswordSchema = yup.object({
-  email: yup.string().required('Email is required').email('Please enter a valid email'),
-});
-
-type ForgotPasswordFormData = {
-  email: string;
-};
+import { useDispatch } from 'react-redux';
+import { forgotPassword } from '@/store/slices/authSlice';
+import { ForgotPasswordFormData } from '@/types/forms';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Link } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const ForgotPasswordPage = () => {
-  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ForgotPasswordFormData>({
-    resolver: yupResolver(forgotPasswordSchema),
+  const schema = yup.object({
+    email: yup.string().required('Email is required').email('Invalid email format'),
+  }).required();
+
+  const form = useForm<ForgotPasswordFormData>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      email: '',
+    },
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    setLoading(true);
+    setIsSubmitting(true);
+    setServerError(null);
     try {
-      // Replace with actual API endpoint
-      await axios.post('https://namph.connectnesthub.com/api/request/password/reset/verification', {
-        email: data.email,
-      });
-      
-      setEmailSent(true);
-      toast.success('Verification code has been sent to your email');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to send verification code';
-      toast.error(errorMessage);
+      const resultAction = await dispatch(forgotPassword(data));
+      if (forgotPassword.fulfilled.match(resultAction)) {
+        toast({
+          title: 'Email Sent',
+          description: 'Please check your inbox for password reset instructions.',
+        });
+        setEmailSent(true);
+      } else {
+        setServerError('Failed to send reset password email. Please try again.');
+      }
+    } catch (err) {
+      setServerError('An unexpected error occurred. Please try again.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (emailSent) {
-    return (
-      <div className="text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary bg-opacity-10 mb-4">
-          <Mail className="h-6 w-6 text-brand-primary" />
-        </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Check Your Email</h2>
-        <p className="text-gray-600 mb-6">
-          We've sent a verification code to your email. Use this code to reset your password.
-        </p>
-        <Link
-          to="/reset-password"
-          className="btn-primary inline-block"
-        >
-          Reset Password
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <h2 className="text-center text-xl font-bold text-gray-900 mb-6">
-        Forgot Password
-      </h2>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="form-input-group">
-          <label htmlFor="email" className="form-label">
-            Email
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="email"
-              type="email"
-              {...register('email')}
-              className={`form-input pl-10 ${errors.email ? 'border-red-500' : ''}`}
-              placeholder="Enter your email"
-              disabled={loading}
-            />
-          </div>
-          {errors.email && (
-            <p className="form-error">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div>
-          <button
-            type="submit"
-            className="w-full btn-primary"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Sending...
-              </span>
-            ) : (
-              'Send Reset Code'
-            )}
-          </button>
-        </div>
-      </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
-          Remember your password?{' '}
-          <Link to="/login" className="text-brand-primary font-medium hover:text-brand-primary/80">
-            Log in
-          </Link>
-        </p>
+    <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold">Forgot Password</h1>
+        <p className="text-muted-foreground mt-2">Enter your email to reset your password</p>
       </div>
+
+      {(error || serverError) && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
+          {error || serverError}
+        </div>
+      )}
+
+      {emailSent ? (
+        <div className="text-center text-green-500 font-semibold">
+          Password reset link has been sent to your email address.
+        </div>
+      ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your email" {...field} type="email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </Button>
+
+            <div className="text-center mt-4">
+              <Link to="/login" className="text-sm text-primary hover:underline">
+                Back to Login
+              </Link>
+            </div>
+          </form>
+        </Form>
+      )}
     </div>
   );
 };

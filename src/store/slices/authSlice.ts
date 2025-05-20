@@ -1,319 +1,331 @@
-
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import axios from "@/utils/axios";
-import { User } from "@/types/user";
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import axios, { AxiosError } from 'axios';
+import { User } from '@/types/user';
+import { 
+  LoginFormData, 
+  RegisterFormData, 
+  VerifyEmailFormData, 
+  ForgotPasswordFormData, 
+  ResetPasswordFormData, 
+  VerifyLoginCodeFormData 
+} from '@/types/forms';
+import { axiosInstance } from '@/utils/axios';
 
 interface AuthState {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: User | null;
-  loading: boolean;
   error: string | null;
-  accessToken: string | null;
+  // Add these for login verification flow
+  requiresVerification: boolean;
+  tempUserId: number | null;
 }
 
 const initialState: AuthState = {
   isAuthenticated: false,
+  isLoading: false,
   user: null,
-  loading: false,
   error: null,
-  accessToken: localStorage.getItem('accessToken'),
+  requiresVerification: false,
+  tempUserId: null,
 };
 
-// Register user
-export const registerUser = createAsyncThunk(
-  'auth/register',
-  async (userData: any, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/register', userData);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Registration failed'
-      );
-    }
-  }
-);
-
-// Verify email
-export const verifyEmail = createAsyncThunk(
-  'auth/verifyEmail',
-  async (verificationData: any, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/verify/email', verificationData);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Email verification failed'
-      );
-    }
-  }
-);
-
-// Login user
-export const loginUser = createAsyncThunk(
+// Auth Async Thunks
+export const login = createAsyncThunk(
   'auth/login',
-  async (loginData: any, { rejectWithValue }) => {
+  async (credentials: LoginFormData, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/login', loginData);
+      const response = await axiosInstance.post('/login', credentials);
       
-      // Check if the response indicates the need for a verification code
+      // Check if admin/host needs verification
       if (response.data.data?.requires_verification) {
         return {
-          requires_verification: true,
-          user_id: response.data.data.user_id
+          requiresVerification: true,
+          userId: response.data.data.user_id
         };
       }
       
       // Regular login success
-      if (response.data.data?.authorization?.token) {
-        localStorage.setItem('accessToken', response.data.data.authorization.token);
-        return {
-          user: response.data.data.user,
-          token: response.data.data.authorization.token
-        };
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Login failed');
       }
-      
-      return rejectWithValue('Invalid response from server');
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Login failed'
-      );
+      return rejectWithValue('An unexpected error occurred');
     }
   }
 );
 
-// Verify login code (for admin/host two-factor)
+export const register = createAsyncThunk(
+  'auth/register',
+  async (userData: RegisterFormData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/register', userData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const verifyEmail = createAsyncThunk(
+  'auth/verifyEmail',
+  async (verificationData: VerifyEmailFormData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/verify/email', verificationData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Email verification failed');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const resendVerificationCode = createAsyncThunk(
+  'auth/resendVerificationCode',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/resend/verificationcode', { email });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to resend verification code');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const forgotPassword = createAsyncThunk(
+  'auth/forgotPassword',
+  async (emailData: ForgotPasswordFormData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/request/password/reset/verification', emailData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to process forgot password request');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (resetData: ResetPasswordFormData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/reset/password', resetData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to reset password');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 export const verifyLoginCode = createAsyncThunk(
   'auth/verifyLoginCode',
-  async (verificationData: any, { rejectWithValue }) => {
+  async (verificationData: VerifyLoginCodeFormData, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/verify/login/code', verificationData);
-      
-      if (response.data.data?.authorization?.token) {
-        localStorage.setItem('accessToken', response.data.data.authorization.token);
-        return {
-          user: response.data.data.user,
-          token: response.data.data.authorization.token
-        };
+      const response = await axiosInstance.post('/verify/login/code', verificationData);
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Login code verification failed');
       }
-      
-      return rejectWithValue('Invalid response from server');
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Verification failed'
-      );
+      return rejectWithValue('An unexpected error occurred');
     }
   }
 );
 
-// Logout user
+export const resendLoginCode = createAsyncThunk(
+  'auth/resendLoginCode',
+  async (userId: number, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/resend/login/code', { user_id: userId });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to resend login code');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      // Only make the API call if we have a token
-      if (localStorage.getItem('accessToken')) {
-        await axios.post('/logout');
+      const response = await axiosInstance.post('/logout');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Logout failed');
       }
-      localStorage.removeItem('accessToken');
-      return null;
-    } catch (error: any) {
-      // Even if the API call fails, we'll still remove the token and log the user out
-      localStorage.removeItem('accessToken');
-      return rejectWithValue(
-        error.response?.data?.message || 'Logout failed'
-      );
+      return rejectWithValue('An unexpected error occurred');
     }
   }
 );
 
-// Forgot password
-export const forgotPassword = createAsyncThunk(
-  'auth/forgotPassword',
-  async (email: string, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/request/password/reset/verification', { email });
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Password reset request failed'
-      );
-    }
-  }
-);
-
-// Verify reset code
-export const verifyResetCode = createAsyncThunk(
-  'auth/verifyResetCode',
-  async (data: { email: string, verification_code: string }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/verify/password/reset/code', data);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Code verification failed'
-      );
-    }
-  }
-);
-
-// Reset password
-export const resetPassword = createAsyncThunk(
-  'auth/resetPassword',
-  async (data: { token: string, password: string, password_confirmation: string }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/reset/password', data);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Password reset failed'
-      );
-    }
-  }
-);
-
-// Get authenticated user
-export const getUserProfile = createAsyncThunk(
-  'auth/getUserProfile',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.get('/personal/profile');
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'Failed to get user profile'
-      );
-    }
-  }
-);
-
+// Auth Slice
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.user = action.payload.user;
-      state.accessToken = action.payload.token;
-      state.isAuthenticated = true;
-      localStorage.setItem('accessToken', action.payload.token);
+    clearErrors: (state) => {
+      state.error = null;
     },
-    clearCredentials: (state) => {
-      state.user = null;
-      state.accessToken = null;
+    setUser: (state, action: PayloadAction<User>) => {
+      state.user = action.payload;
+      state.isAuthenticated = true;
+    },
+    clearAuth: (state) => {
       state.isAuthenticated = false;
-      localStorage.removeItem('accessToken');
+      state.user = null;
+      state.error = null;
+      state.requiresVerification = false;
+      state.tempUserId = null;
     },
   },
   extraReducers: (builder) => {
-    // Register user
-    builder.addCase(registerUser.pending, (state) => {
-      state.loading = true;
+    // Login reducers
+    builder.addCase(login.pending, (state) => {
+      state.isLoading = true;
       state.error = null;
     });
-    builder.addCase(registerUser.fulfilled, (state) => {
-      state.loading = false;
+    builder.addCase(login.fulfilled, (state, action) => {
+      state.isLoading = false;
+      
+      // Handle admin/host two-factor authentication
+      if (action.payload?.requiresVerification) {
+        state.requiresVerification = true;
+        state.tempUserId = action.payload.userId;
+        return;
+      }
+      
+      // Regular login
+      if (action.payload?.user) {
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+      }
     });
-    builder.addCase(registerUser.rejected, (state, action) => {
-      state.loading = false;
+    builder.addCase(login.rejected, (state, action) => {
+      state.isLoading = false;
       state.error = action.payload as string;
     });
-
-    // Verify email
+    
+    // Register reducers
+    builder.addCase(register.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(register.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(register.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
+    // Verify email reducers
     builder.addCase(verifyEmail.pending, (state) => {
-      state.loading = true;
+      state.isLoading = true;
       state.error = null;
     });
     builder.addCase(verifyEmail.fulfilled, (state) => {
-      state.loading = false;
+      state.isLoading = false;
     });
     builder.addCase(verifyEmail.rejected, (state, action) => {
-      state.loading = false;
+      state.isLoading = false;
       state.error = action.payload as string;
     });
-
-    // Login user
-    builder.addCase(loginUser.pending, (state) => {
-      state.loading = true;
+    
+    // Resend verification code reducers
+    builder.addCase(resendVerificationCode.pending, (state) => {
+      state.isLoading = true;
       state.error = null;
     });
-    builder.addCase(loginUser.fulfilled, (state, action) => {
-      state.loading = false;
-      // If login returns a token and user, set them in state
-      if (action.payload.user && action.payload.token) {
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.token;
-      }
-      // If requires verification, we don't update authentication state
+    builder.addCase(resendVerificationCode.fulfilled, (state) => {
+      state.isLoading = false;
     });
-    builder.addCase(loginUser.rejected, (state, action) => {
-      state.loading = false;
-      state.isAuthenticated = false;
+    builder.addCase(resendVerificationCode.rejected, (state, action) => {
+      state.isLoading = false;
       state.error = action.payload as string;
     });
-
-    // Verify login code
+    
+    // Forgot password reducers
+    builder.addCase(forgotPassword.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(forgotPassword.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(forgotPassword.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
+    // Reset password reducers
+    builder.addCase(resetPassword.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(resetPassword.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(resetPassword.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
+    // Verify login code reducers
     builder.addCase(verifyLoginCode.pending, (state) => {
-      state.loading = true;
+      state.isLoading = true;
       state.error = null;
     });
     builder.addCase(verifyLoginCode.fulfilled, (state, action) => {
-      state.loading = false;
-      if (action.payload.user && action.payload.token) {
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.token;
-      }
+      state.isLoading = false;
+      state.isAuthenticated = true;
+      state.user = action.payload;
+      state.requiresVerification = false;
+      state.tempUserId = null;
     });
     builder.addCase(verifyLoginCode.rejected, (state, action) => {
-      state.loading = false;
+      state.isLoading = false;
       state.error = action.payload as string;
     });
-
-    // Logout
-    builder.addCase(logout.pending, (state) => {
-      state.loading = true;
+    
+    // Resend login code reducers
+    builder.addCase(resendLoginCode.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
     });
+    builder.addCase(resendLoginCode.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(resendLoginCode.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
+    // Logout reducers
     builder.addCase(logout.fulfilled, (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.accessToken = null;
-      state.loading = false;
       state.error = null;
-    });
-    builder.addCase(logout.rejected, (state) => {
-      // Even if the API call fails, we want to log the user out on the client side
-      state.isAuthenticated = false;
-      state.user = null;
-      state.accessToken = null;
-      state.loading = false;
-    });
-
-    // Get user profile
-    builder.addCase(getUserProfile.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(getUserProfile.fulfilled, (state, action) => {
-      state.loading = false;
-      if (action.payload.data) {
-        state.user = action.payload.data;
-      }
-    });
-    builder.addCase(getUserProfile.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-      
-      // If the API call returns a 401 (Unauthorized), log the user out
-      if (axios.isAxiosError(action.payload) && action.payload.response?.status === 401) {
-        state.isAuthenticated = false;
-        state.user = null;
-        state.accessToken = null;
-      }
     });
   },
 });
 
-export const { setCredentials, clearCredentials } = authSlice.actions;
-
+export const { clearErrors, setUser, clearAuth } = authSlice.actions;
 export default authSlice.reducer;
