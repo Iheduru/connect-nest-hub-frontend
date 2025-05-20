@@ -20,8 +20,8 @@ const DashboardHeader = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const dispatch = useDispatch();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await dispatch(logout() as any);
     navigate('/login');
   };
 
@@ -30,7 +30,7 @@ const DashboardHeader = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
       <div className="h-16 px-4 flex items-center justify-between">
         <div className="flex items-center">
           <button
-            onClick={onToggleSidebar}
+            onClick={toggleSidebar}
             className="p-1 rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
           >
             <Menu className="h-6 w-6" />

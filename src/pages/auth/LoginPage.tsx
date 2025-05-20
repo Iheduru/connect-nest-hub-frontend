@@ -21,13 +21,13 @@ const LoginPage = () => {
   const { isLoading, error, requiresVerification, tempUserId } = useSelector((state: RootState) => state.auth);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     email_or_username: yup.string().required('Email or username is required'),
     password: yup.string().required('Password is required'),
-  }).required();
+  });
 
   const form = useForm<LoginFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       email_or_username: '',
       password: '',
@@ -36,7 +36,7 @@ const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const resultAction = await dispatch(login(data));
+      const resultAction = await dispatch(login(data) as any);
       
       if (login.fulfilled.match(resultAction)) {
         if (resultAction.payload?.requiresVerification) {

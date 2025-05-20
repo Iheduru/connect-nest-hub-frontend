@@ -1,30 +1,35 @@
 
-import { Outlet } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/store';
-import { toggleSidebar } from '@/store/slices/uiSlice';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { useState, useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { useMobile } from "@/hooks/use-mobile";
 
 const DashboardLayout = () => {
-  const { isSidebarOpen } = useSelector((state: RootState) => state.ui);
-  const dispatch = useDispatch();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useMobile();
+  const location = useLocation();
+  const { user } = useSelector((state: RootState) => state.auth);
 
-  const handleToggleSidebar = () => {
-    dispatch(toggleSidebar());
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      <DashboardSidebar isOpen={isSidebarOpen} />
-      
+    <div className="flex h-screen bg-gray-100">
+      <DashboardSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <DashboardHeader onToggleSidebar={handleToggleSidebar} />
-        
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
+        <DashboardHeader toggleSidebar={toggleSidebar} />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <Outlet />
         </main>
       </div>
     </div>

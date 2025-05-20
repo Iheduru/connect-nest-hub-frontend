@@ -1,10 +1,9 @@
-
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
-import { useDispatch } from 'react-redux';
 import { logout } from '@/store/slices/authSlice';
-import { User, LogOut, Home, Building, Phone, Info } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,10 +15,13 @@ import {
 
 const Navbar = () => {
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await dispatch(logout() as any);
+    navigate('/login');
   };
 
   return (

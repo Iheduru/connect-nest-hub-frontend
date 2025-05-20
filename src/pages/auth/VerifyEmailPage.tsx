@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -16,52 +17,70 @@ const VerifyEmailPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const email = searchParams.get('email') || '';
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const schema = yup.object({
+  // Get email from URL if available
+  const emailFromUrl = searchParams.get('email') || '';
+
+  const schema = yup.object().shape({
     email: yup.string().required('Email is required').email('Invalid email format'),
-    verification_code: yup.string()
-      .required('Verification code is required')
-      .length(8, 'Verification code must be 8 digits')
-      .matches(/^[0-9]+$/, 'Verification code must contain only numbers'),
-  }).required();
+    verification_code: yup.string().required('Verification code is required'),
+  });
 
   const form = useForm<VerifyEmailFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
-      email: email,
+      email: emailFromUrl,
       verification_code: '',
     },
   });
 
   const onSubmit = async (data: VerifyEmailFormData) => {
+    setIsSubmitting(true);
+    setServerError(null);
     try {
-      const resultAction = await dispatch(verifyEmail(data));
-      
+      const resultAction = await dispatch(verifyEmail(data) as any);
       if (verifyEmail.fulfilled.match(resultAction)) {
         toast({
-          title: 'Email verified',
-          description: 'Your email has been successfully verified!',
+          title: 'Email Verified',
+          description: 'Your email has been verified successfully.',
         });
         navigate('/login');
+      } else {
+        setServerError('Failed to verify email. Please check your verification code.');
       }
     } catch (err) {
-      setServerError('Email verification failed. Please try again.');
+      setServerError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleResendCode = async () => {
+    const email = form.getValues('email');
+    if (!email) {
+      form.setError('email', { 
+        type: 'manual', 
+        message: 'Please enter your email address' 
+      });
+      return;
+    }
+
     setIsResending(true);
     try {
-      await dispatch(resendVerificationCode(email));
-      toast({
-        title: 'Verification code resent',
-        description: 'A new verification code has been sent to your email address.',
-      });
+      const resultAction = await dispatch(resendVerificationCode(email) as any);
+      if (resendVerificationCode.fulfilled.match(resultAction)) {
+        toast({
+          title: 'Verification Code Sent',
+          description: 'A new verification code has been sent to your email.',
+        });
+      } else {
+        setServerError('Failed to send verification code. Please try again.');
+      }
     } catch (err) {
-      setServerError('Failed to resend verification code. Please try again.');
+      setServerError('An unexpected error occurred. Please try again.');
     } finally {
       setIsResending(false);
     }
@@ -71,14 +90,12 @@ const VerifyEmailPage = () => {
     <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">Verify Your Email</h1>
-        <p className="text-muted-foreground mt-2">
-          Enter the verification code sent to your email address.
-        </p>
+        <p className="text-muted-foreground mt-2">Enter the verification code sent to your email</p>
       </div>
 
-      {(error || serverError) && (
+      {serverError && (
         <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
-          {error || serverError}
+          {serverError}
         </div>
       )}
 
@@ -91,7 +108,12 @@ const VerifyEmailPage = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter your email" {...field} readOnly />
+                  <Input
+                    placeholder="Enter your email"
+                    {...field}
+                    type="email"
+                    disabled={!!emailFromUrl}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -105,26 +127,36 @@ const VerifyEmailPage = () => {
               <FormItem>
                 <FormLabel>Verification Code</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Enter verification code" {...field} />
+                  <Input
+                    placeholder="Enter verification code"
+                    {...field}
+                    autoComplete="off"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            Verify Email
-          </Button>
+          <div className="flex justify-between items-center">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResendCode}
+              disabled={isResending}
+              className="text-sm"
+            >
+              {isResending ? 'Sending...' : 'Resend Code'}
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Verifying...' : 'Verify Email'}
+            </Button>
+          </div>
 
           <div className="text-center mt-4">
-            <Button 
-              type="button" 
-              variant="link" 
-              onClick={handleResendCode} 
-              disabled={isResending}
-            >
-              {isResending ? 'Resending...' : 'Resend Code'}
-            </Button>
+            <Link to="/login" className="text-sm text-primary hover:underline">
+              Back to Login
+            </Link>
           </div>
         </form>
       </Form>

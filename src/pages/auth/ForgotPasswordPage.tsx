@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -20,12 +21,12 @@ const ForgotPasswordPage = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     email: yup.string().required('Email is required').email('Invalid email format'),
-  }).required();
+  });
 
   const form = useForm<ForgotPasswordFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       email: '',
     },
@@ -35,7 +36,7 @@ const ForgotPasswordPage = () => {
     setIsSubmitting(true);
     setServerError(null);
     try {
-      const resultAction = await dispatch(forgotPassword(data));
+      const resultAction = await dispatch(forgotPassword(data) as any);
       if (forgotPassword.fulfilled.match(resultAction)) {
         toast({
           title: 'Email Sent',
@@ -59,9 +60,9 @@ const ForgotPasswordPage = () => {
         <p className="text-muted-foreground mt-2">Enter your email to reset your password</p>
       </div>
 
-      {(error || serverError) && (
+      {(serverError) && (
         <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 text-center">
-          {error || serverError}
+          {serverError}
         </div>
       )}
 

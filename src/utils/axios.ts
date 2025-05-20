@@ -8,7 +8,7 @@ import { logout } from '@/store/slices/authSlice';
 const API_URL = 'https://namph.connectnesthub.com/api';
 
 // Create axios instance
-const axiosInstance = axios.create({
+export const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -71,4 +71,5 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+// Also export as default for backward compatibility
 export default axiosInstance;
