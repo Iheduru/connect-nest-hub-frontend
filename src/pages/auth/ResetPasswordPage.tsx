@@ -28,7 +28,7 @@ const ResetPasswordPage = () => {
     return null;
   }
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     token: yup.string().required('Token is required'),
     password: yup.string()
       .required('Password is required')
@@ -40,10 +40,10 @@ const ResetPasswordPage = () => {
     password_confirmation: yup.string()
       .required('Password confirmation is required')
       .oneOf([yup.ref('password')], 'Passwords must match'),
-  }) as yup.ObjectSchema<ResetPasswordFormData>;
+  });
 
   const form = useForm<ResetPasswordFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       token: token,
       password: '',

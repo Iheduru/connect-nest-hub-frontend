@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Profile } from '@/types/user';
 import axios from '@/utils/axios';
@@ -110,7 +109,10 @@ const profileSlice = createSlice({
     builder.addCase(uploadProfilePicture.fulfilled, (state, action: PayloadAction<Profile>) => {
       state.isLoading = false;
       if (state.profile && action.payload.profile_picture) {
-        state.profile.profile_picture = action.payload.profile_picture;
+        state.profile = {
+          ...state.profile,
+          profile_picture: action.payload.profile_picture
+        };
       }
     });
     builder.addCase(uploadProfilePicture.rejected, (state, action) => {

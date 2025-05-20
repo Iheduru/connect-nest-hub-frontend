@@ -40,7 +40,7 @@ export interface VerifyLoginCodeFormData {
 // Profile form types
 export interface ProfileFormData {
   middle_name?: string;
-  phone_number: string;
+  phone_number?: string; // Changed from required to optional to match usage
   alternative_email?: string;
   bio?: string;
   gender?: string;

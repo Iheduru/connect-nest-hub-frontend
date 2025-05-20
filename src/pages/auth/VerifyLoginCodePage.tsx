@@ -27,16 +27,16 @@ const VerifyLoginCodePage = () => {
     return null;
   }
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     user_id: yup.number().required('User ID is required'),
     verification_code: yup.string()
       .required('Verification code is required')
       .length(8, 'Verification code must be 8 digits')
       .matches(/^[0-9]+$/, 'Verification code must contain only numbers'),
-  }) as yup.ObjectSchema<VerifyLoginCodeFormData>;
+  });
 
   const form = useForm<VerifyLoginCodeFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       user_id: tempUserId,
       verification_code: '',

@@ -29,9 +29,9 @@ const ProfilePage = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     middle_name: yup.string().optional(),
-    phone_number: yup.string().required('Phone number is required'),
+    phone_number: yup.string().optional(),
     alternative_email: yup.string().email('Invalid email format').optional(),
     bio: yup.string().optional(),
     gender: yup.string().optional(),
@@ -40,10 +40,10 @@ const ProfilePage = () => {
     state: yup.string().optional(),
     country: yup.string().optional(),
     profile_picture: yup.mixed().optional(),
-  }) as yup.ObjectSchema<ProfileFormData>;
+  });
 
   const form = useForm<ProfileFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       middle_name: profile?.middle_name || user?.middle_name || '',
       phone_number: profile?.phone_number || '',

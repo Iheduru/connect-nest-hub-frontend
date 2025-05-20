@@ -25,7 +25,7 @@ const RegisterPage = () => {
   const dispatch = useDispatch();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const schema = yup.object({
+  const schema = yup.object().shape({
     username: yup.string()
       .required('Username is required')
       .min(3, 'Username must be at least 3 characters')
@@ -52,10 +52,10 @@ const RegisterPage = () => {
     role: yup.string()
       .oneOf(['client', 'host', 'admin'] as const, 'Invalid role')
       .required('Role is required'),
-  }) as yup.ObjectSchema<RegisterFormData>;
+  });
 
   const form = useForm<RegisterFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       username: '',
       first_name: '',
