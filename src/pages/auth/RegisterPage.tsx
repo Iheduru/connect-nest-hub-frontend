@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useDispatch } from 'react-redux';
-import { register } from '@/store/slices/authSlice';
+import { register as registerUser } from '@/store/slices/authSlice';
 import { RegisterFormData } from '@/types/forms';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -68,9 +69,9 @@ const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const resultAction = await dispatch(register(data));
+      const resultAction = await dispatch(registerUser(data) as any);
 
-      if (register.fulfilled.match(resultAction)) {
+      if (registerUser.fulfilled.match(resultAction)) {
         toast({
           title: 'Registration successful',
           description: 'You have successfully registered. Please check your email to verify your account.',

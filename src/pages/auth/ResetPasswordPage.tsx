@@ -1,6 +1,5 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -11,92 +10,60 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Lock, CheckCircle } from 'lucide-react';
 
 const ResetPasswordPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useDispatch();
+  const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [resetComplete, setResetComplete] = useState(false);
   
-  // Get token from URL
   const token = searchParams.get('token') || '';
-  const email = searchParams.get('email') || '';
+  
+  if (!token) {
+    navigate('/forgot-password');
+    return null;
+  }
 
-  // Redirect if no token
-  useEffect(() => {
-    if (!token) {
-      navigate('/forgot-password');
-    }
-  }, [token, navigate]);
-
-  const schema = yup.object().shape({
-    password: yup
-      .string()
+  const schema = yup.object({
+    token: yup.string().required('Token is required'),
+    password: yup.string()
       .required('Password is required')
-      .min(8, 'Password must be at least 8 characters'),
-    password_confirmation: yup
-      .string()
-      .oneOf([yup.ref('password')], 'Passwords must match')
-      .required('Please confirm your password'),
-    token: yup.string().required('Reset token is required'),
-  });
+      .min(8, 'Password must be at least 8 characters')
+      .matches(/(?=.*[A-Z])/, 'Password must contain at least one uppercase letter')
+      .matches(/(?=.*[a-z])/, 'Password must contain at least one lowercase letter')
+      .matches(/(?=.*[0-9])/, 'Password must contain at least one number')
+      .matches(/(?=.*[!@#$%^&*])/, 'Password must contain at least one special character'),
+    password_confirmation: yup.string()
+      .required('Password confirmation is required')
+      .oneOf([yup.ref('password')], 'Passwords must match'),
+  }).required();
 
   const form = useForm<ResetPasswordFormData>({
-    resolver: yupResolver(schema) as any,
+    resolver: yupResolver(schema),
     defaultValues: {
+      token: token,
       password: '',
       password_confirmation: '',
-      token,
-      email,
     },
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    setIsSubmitting(true);
-    setServerError(null);
-    
+    setIsLoading(true);
     try {
-      const resultAction = await dispatch(resetPassword(data) as any);
-      
-      if (resetPassword.fulfilled.match(resultAction)) {
-        toast({
-          title: 'Success!',
-          description: 'Your password has been reset successfully.',
-        });
-        setResetComplete(true);
-      } else {
-        setServerError('Failed to reset password. Please try again.');
-      }
-    } catch (err) {
-      setServerError('An unexpected error occurred. Please try again.');
+      await dispatch(resetPassword(data) as any);
+      toast({
+        title: 'Password reset successful',
+        description: 'Your password has been reset successfully. You can now login with your new password.',
+      });
+      navigate('/login');
+    } catch (error: any) {
+      setServerError('Failed to reset password. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
-
-  if (resetComplete) {
-    return (
-      <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
-          </div>
-          <h1 className="text-2xl font-bold">Password Reset Complete</h1>
-          <p className="text-muted-foreground mt-2">Your password has been reset successfully.</p>
-        </div>
-        
-        <div className="mt-8">
-          <Link to="/login">
-            <Button className="w-full">Go to Login</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
@@ -155,8 +122,8 @@ const ResetPasswordPage = () => {
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Resetting...' : 'Reset Password'}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Resetting...' : 'Reset Password'}
           </Button>
 
           <div className="text-center mt-4">

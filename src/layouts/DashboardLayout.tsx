@@ -5,11 +5,11 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -25,7 +25,7 @@ const DashboardLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <DashboardSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+      <DashboardSidebar isOpen={sidebarOpen} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <DashboardHeader toggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

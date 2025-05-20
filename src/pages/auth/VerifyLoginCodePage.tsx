@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -44,7 +45,7 @@ const VerifyLoginCodePage = () => {
 
   const onSubmit = async (data: VerifyLoginCodeFormData) => {
     try {
-      const resultAction = await dispatch(verifyLoginCode(data));
+      const resultAction = await dispatch(verifyLoginCode(data) as any);
 
       if (verifyLoginCode.fulfilled.match(resultAction)) {
         toast({
@@ -62,7 +63,7 @@ const VerifyLoginCodePage = () => {
     setIsResending(true);
     try {
       if (tempUserId) {
-        await dispatch(resendLoginCode(tempUserId));
+        await dispatch(resendLoginCode(tempUserId) as any);
         toast({
           title: 'Verification code resent',
           description: 'A new verification code has been sent to your email.',

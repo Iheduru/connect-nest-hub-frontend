@@ -14,7 +14,7 @@ export interface RegisterFormData {
   middle_name?: string;
   password: string;
   password_confirmation: string;
-  role?: string;
+  role: string;
 }
 
 export interface ForgotPasswordFormData {

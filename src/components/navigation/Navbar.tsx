@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { logout } from '@/store/slices/authSlice';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, Home, Building2, Info, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,7 +47,7 @@ const Navbar = () => {
                 to="/properties" 
                 className="border-transparent text-gray-500 hover:border-brand-primary hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors animate-fade-in [animation-delay:200ms]"
               >
-                <Building className="h-4 w-4 mr-1" />
+                <Building2 className="h-4 w-4 mr-1" />
                 Properties
               </Link>
               <Link 
