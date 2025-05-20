@@ -54,7 +54,7 @@ const ResetPasswordPage = () => {
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
     try {
-      await dispatch(resetPassword(data) as any);
+      await dispatch(resetPassword(data));
       toast({
         title: 'Password reset successful',
         description: 'Your password has been reset successfully. You can now login with your new password.',

@@ -109,7 +109,7 @@ const profileSlice = createSlice({
     });
     builder.addCase(uploadProfilePicture.fulfilled, (state, action: PayloadAction<Profile>) => {
       state.isLoading = false;
-      if (state.profile) {
+      if (state.profile && action.payload.profile_picture) {
         state.profile.profile_picture = action.payload.profile_picture;
       }
     });

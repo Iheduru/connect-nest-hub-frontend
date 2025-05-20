@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -9,7 +10,6 @@ import { RegisterFormData } from '@/types/forms';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -49,7 +49,9 @@ const RegisterPage = () => {
     password_confirmation: yup.string()
       .required('Password confirmation is required')
       .oneOf([yup.ref('password')], 'Passwords must match'),
-    role: yup.string().oneOf(['client', 'host', 'admin'], 'Invalid role').required('Role is required'),
+    role: yup.string()
+      .oneOf(['client', 'host', 'admin'] as const, 'Invalid role')
+      .required('Role is required'),
   });
 
   const form = useForm<RegisterFormData>({
@@ -68,8 +70,8 @@ const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const resultAction = await dispatch(registerUser(data) as any);
-
+      const resultAction = await dispatch(registerUser(data));
+      
       if (registerUser.fulfilled.match(resultAction)) {
         toast({
           title: 'Registration successful',
