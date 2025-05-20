@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -91,15 +90,28 @@ export const verifyLoginCode = createAsyncThunk(
   'auth/verifyLoginCode',
   async (data: { user_id: number; verification_code: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/verify/login/code`, data);
-      const { token } = response.data.data.authorization;
-      setAuthToken(token);
-      toast.success('Login successful!');
-      return response.data.data.user;
+      const response = await axios.post('https://namph.connectnesthub.com/api/verify/login/code', data);
+      return response.data.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Verification failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      const message = error.response?.data?.message || 'Verification failed';
+      toast.error(message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+export const resendLoginCode = createAsyncThunk(
+  'auth/resendLoginCode',
+  async (userId: number, { rejectWithValue }) => {
+    try {
+      // Note: This is a mock implementation as the API documentation doesn't specify a resend endpoint
+      // You'll need to replace this with the actual endpoint when available
+      const response = await axios.post('https://namph.connectnesthub.com/api/resend/login/code', { user_id: userId });
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to resend verification code';
+      toast.error(message);
+      return rejectWithValue(message);
     }
   }
 );
@@ -252,9 +264,10 @@ const authSlice = createSlice({
     builder.addCase(verifyLoginCode.fulfilled, (state, action) => {
       state.loading = false;
       state.isAuthenticated = true;
-      state.user = action.payload;
       state.requiresVerification = false;
       state.tempUserId = null;
+      state.user = action.payload.user;
+      state.token = action.payload.authorization.token;
     });
     builder.addCase(verifyLoginCode.rejected, (state, action) => {
       state.loading = false;
@@ -289,6 +302,18 @@ const authSlice = createSlice({
     });
     builder.addCase(verifyEmail.rejected, (state, action) => {
       state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Resend Login Code
+    builder.addCase(resendLoginCode.pending, (state) => {
+      // You could have a separate loading state for resending if needed
+      state.error = null;
+    });
+    builder.addCase(resendLoginCode.fulfilled, (state) => {
+      // No state changes needed on success, just the toast notification
+    });
+    builder.addCase(resendLoginCode.rejected, (state, action) => {
       state.error = action.payload as string;
     });
   },
