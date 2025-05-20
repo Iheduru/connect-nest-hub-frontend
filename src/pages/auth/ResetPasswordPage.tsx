@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Lock } from 'lucide-react';
 
 const ResetPasswordPage = () => {
   const { toast } = useToast();
@@ -38,7 +40,7 @@ const ResetPasswordPage = () => {
     password_confirmation: yup.string()
       .required('Password confirmation is required')
       .oneOf([yup.ref('password')], 'Passwords must match'),
-  }).required();
+  });
 
   const form = useForm<ResetPasswordFormData>({
     resolver: yupResolver(schema),
@@ -93,7 +95,9 @@ const ResetPasswordPage = () => {
                       placeholder="Enter your new password" 
                       {...field}
                     />
-                    <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400">
+                      <Lock size={16} />
+                    </div>
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -114,7 +118,9 @@ const ResetPasswordPage = () => {
                       placeholder="Confirm your new password" 
                       {...field}
                     />
-                    <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400">
+                      <Lock size={16} />
+                    </div>
                   </div>
                 </FormControl>
                 <FormMessage />

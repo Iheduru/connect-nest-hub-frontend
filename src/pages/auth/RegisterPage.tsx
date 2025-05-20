@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -50,8 +49,8 @@ const RegisterPage = () => {
     password_confirmation: yup.string()
       .required('Password confirmation is required')
       .oneOf([yup.ref('password')], 'Passwords must match'),
-    role: yup.string().oneOf(['client', 'host', 'admin'], 'Invalid role'),
-  }).required();
+    role: yup.string().oneOf(['client', 'host', 'admin'], 'Invalid role').required('Role is required'),
+  });
 
   const form = useForm<RegisterFormData>({
     resolver: yupResolver(schema),

@@ -22,6 +22,7 @@ export interface Profile {
   alternative_email?: string;
   gender?: string;
   dob?: string;
+  middle_name?: string;
   nationality?: string;
   address?: string;
   city?: string;
@@ -29,6 +30,7 @@ export interface Profile {
   country?: string;
   company_name?: string;
   website?: string;
+  profile_picture?: string;
   social_links?: {
     twitter?: string;
     linkedin?: string;

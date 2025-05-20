@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -25,7 +24,7 @@ const ProfilePage = () => {
   const { toast } = useToast();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { profile, isLoading = false } = useSelector((state: RootState) => state.profile);
+  const { profile, isLoading } = useSelector((state: RootState) => state.profile);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -40,7 +39,8 @@ const ProfilePage = () => {
     city: yup.string().optional(),
     state: yup.string().optional(),
     country: yup.string().optional(),
-  }).required();
+    profile_picture: yup.mixed().optional(),
+  });
 
   const form = useForm<ProfileFormData>({
     resolver: yupResolver(schema),

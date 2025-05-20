@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -33,7 +32,7 @@ const VerifyLoginCodePage = () => {
       .required('Verification code is required')
       .length(8, 'Verification code must be 8 digits')
       .matches(/^[0-9]+$/, 'Verification code must contain only numbers'),
-  }).required();
+  });
 
   const form = useForm<VerifyLoginCodeFormData>({
     resolver: yupResolver(schema),
