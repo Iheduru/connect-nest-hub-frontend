@@ -15,6 +15,9 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Public Pages
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
+import PropertiesPage from "./pages/PropertiesPage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -51,6 +54,9 @@ const App = () => (
             {/* Public Routes */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/properties" element={<PropertiesPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
             </Route>
 
             {/* Auth Routes */}

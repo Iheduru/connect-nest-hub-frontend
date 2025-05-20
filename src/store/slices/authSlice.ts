@@ -1,298 +1,224 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { toast } from 'sonner';
-import { setAuthToken, removeAuthToken } from '@/utils/auth';
 
-// Types
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: 'client' | 'host' | 'admin';
-  first_name?: string;
-  last_name?: string;
-}
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import axios from "@/utils/axios";
+import { User } from "@/types/user";
 
-export interface AuthState {
+interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   loading: boolean;
   error: string | null;
-  tempUserId: number | null; // Used for verification steps
-  requiresVerification: boolean;
+  accessToken: string | null;
 }
 
-// Initial state
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   loading: false,
   error: null,
-  tempUserId: null,
-  requiresVerification: false,
+  accessToken: localStorage.getItem('accessToken'),
 };
 
-const API_URL = 'https://namph.connectnesthub.com/api';
-
-// Async Thunks
-export const register = createAsyncThunk(
+// Register user
+export const registerUser = createAsyncThunk(
   'auth/register',
   async (userData: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/register`, userData);
-      toast.success('Registration successful! Please check your email for verification.');
+      const response = await axios.post('/register', userData);
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Registration failed';
-      const errorDetails = error.response?.data?.errors || {};
-      
-      // Show error toast
-      toast.error(errorMessage);
-      
-      // Format error details for field-level errors
-      return rejectWithValue({ message: errorMessage, details: errorDetails });
+      return rejectWithValue(
+        error.response?.data?.message || 'Registration failed'
+      );
     }
   }
 );
 
-export const login = createAsyncThunk(
-  'auth/login',
-  async (credentials: { email_or_username: string; password: string }, { rejectWithValue }) => {
+// Verify email
+export const verifyEmail = createAsyncThunk(
+  'auth/verifyEmail',
+  async (verificationData: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/login`, credentials);
+      const response = await axios.post('/verify/email', verificationData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Email verification failed'
+      );
+    }
+  }
+);
+
+// Login user
+export const loginUser = createAsyncThunk(
+  'auth/login',
+  async (loginData: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/login', loginData);
       
-      // Handle special case for admin/host that requires verification
+      // Check if the response indicates the need for a verification code
       if (response.data.data?.requires_verification) {
-        toast.info('Please check your email for a verification code.');
-        return { 
-          requiresVerification: true, 
-          userId: response.data.data.user_id 
+        return {
+          requires_verification: true,
+          user_id: response.data.data.user_id
         };
       }
       
-      // Regular login success case
-      const { token } = response.data.data.authorization;
-      setAuthToken(token);
-      toast.success('Login successful!');
-      return { 
-        user: response.data.data.user,
-        requiresVerification: false 
-      };
+      // Regular login success
+      if (response.data.data?.authorization?.token) {
+        localStorage.setItem('accessToken', response.data.data.authorization.token);
+        return {
+          user: response.data.data.user,
+          token: response.data.data.authorization.token
+        };
+      }
+      
+      return rejectWithValue('Invalid response from server');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(
+        error.response?.data?.message || 'Login failed'
+      );
     }
   }
 );
 
+// Verify login code (for admin/host two-factor)
 export const verifyLoginCode = createAsyncThunk(
   'auth/verifyLoginCode',
-  async (data: { user_id: number; verification_code: string }, { rejectWithValue }) => {
+  async (verificationData: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post('https://namph.connectnesthub.com/api/verify/login/code', data);
-      return response.data.data;
+      const response = await axios.post('/verify/login/code', verificationData);
+      
+      if (response.data.data?.authorization?.token) {
+        localStorage.setItem('accessToken', response.data.data.authorization.token);
+        return {
+          user: response.data.data.user,
+          token: response.data.data.authorization.token
+        };
+      }
+      
+      return rejectWithValue('Invalid response from server');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Verification failed';
-      toast.error(message);
-      return rejectWithValue(message);
+      return rejectWithValue(
+        error.response?.data?.message || 'Verification failed'
+      );
     }
   }
 );
 
-export const resendLoginCode = createAsyncThunk(
-  'auth/resendLoginCode',
-  async (userId: number, { rejectWithValue }) => {
-    try {
-      // Note: This is a mock implementation as the API documentation doesn't specify a resend endpoint
-      // You'll need to replace this with the actual endpoint when available
-      const response = await axios.post('https://namph.connectnesthub.com/api/resend/login/code', { user_id: userId });
-      return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to resend verification code';
-      toast.error(message);
-      return rejectWithValue(message);
-    }
-  }
-);
-
+// Logout user
 export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      await axios.post(`${API_URL}/logout`);
-      removeAuthToken();
-      toast.success('Logged out successfully');
+      // Only make the API call if we have a token
+      if (localStorage.getItem('accessToken')) {
+        await axios.post('/logout');
+      }
+      localStorage.removeItem('accessToken');
       return null;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Logout failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      // Even if the API call fails, we'll still remove the token and log the user out
+      localStorage.removeItem('accessToken');
+      return rejectWithValue(
+        error.response?.data?.message || 'Logout failed'
+      );
     }
   }
 );
 
-export const verifyEmail = createAsyncThunk(
-  'auth/verifyEmail',
-  async (data: { email: string; verification_code: string }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_URL}/verify/email`, data);
-      toast.success('Email verified successfully!');
-      return response.data;
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Email verification failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
-    }
-  }
-);
-
-export const resendVerificationCode = createAsyncThunk(
-  'auth/resendVerificationCode',
+// Forgot password
+export const forgotPassword = createAsyncThunk(
+  'auth/forgotPassword',
   async (email: string, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/resend/verificationcode`, { email });
-      toast.success('A new verification code has been sent to your email');
+      const response = await axios.post('/request/password/reset/verification', { email });
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to resend verification code';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(
+        error.response?.data?.message || 'Password reset request failed'
+      );
     }
   }
 );
 
-export const requestPasswordReset = createAsyncThunk(
-  'auth/requestPasswordReset',
-  async (email: string, { rejectWithValue }) => {
+// Verify reset code
+export const verifyResetCode = createAsyncThunk(
+  'auth/verifyResetCode',
+  async (data: { email: string, verification_code: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/request/password/reset/verification`, { email });
-      toast.success('Password reset instructions sent to your email');
+      const response = await axios.post('/verify/password/reset/code', data);
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to request password reset';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(
+        error.response?.data?.message || 'Code verification failed'
+      );
     }
   }
 );
 
-export const verifyPasswordResetCode = createAsyncThunk(
-  'auth/verifyPasswordResetCode',
-  async (data: { email: string; verification_code: string }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_URL}/verify/password/reset/code`, data);
-      toast.success('Verification successful!');
-      return response.data;
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Verification failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
-    }
-  }
-);
-
+// Reset password
 export const resetPassword = createAsyncThunk(
   'auth/resetPassword',
-  async (data: { token: string; password: string; password_confirmation: string }, { rejectWithValue }) => {
+  async (data: { token: string, password: string, password_confirmation: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/reset/password`, data);
-      toast.success('Password reset successfully!');
+      const response = await axios.post('/reset/password', data);
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Password reset failed';
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(
+        error.response?.data?.message || 'Password reset failed'
+      );
     }
   }
 );
 
-// Auth Slice
+// Get authenticated user
+export const getUserProfile = createAsyncThunk(
+  'auth/getUserProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/personal/profile');
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to get user profile'
+      );
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    clearAuthError: (state) => {
-      state.error = null;
-    },
-    restoreAuth: (state, action: PayloadAction<User>) => {
+    setCredentials: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      state.user = action.payload.user;
+      state.accessToken = action.payload.token;
       state.isAuthenticated = true;
-      state.user = action.payload;
+      localStorage.setItem('accessToken', action.payload.token);
+    },
+    clearCredentials: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
+      localStorage.removeItem('accessToken');
     },
   },
   extraReducers: (builder) => {
-    // Register
-    builder.addCase(register.pending, (state) => {
+    // Register user
+    builder.addCase(registerUser.pending, (state) => {
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(register.fulfilled, (state) => {
+    builder.addCase(registerUser.fulfilled, (state) => {
       state.loading = false;
     });
-    builder.addCase(register.rejected, (state, action) => {
+    builder.addCase(registerUser.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });
 
-    // Login
-    builder.addCase(login.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(login.fulfilled, (state, action: any) => {
-      state.loading = false;
-      
-      if (action.payload.requiresVerification) {
-        state.requiresVerification = true;
-        state.tempUserId = action.payload.userId;
-      } else {
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.requiresVerification = false;
-      }
-    });
-    builder.addCase(login.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Verify Login Code
-    builder.addCase(verifyLoginCode.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(verifyLoginCode.fulfilled, (state, action) => {
-      state.loading = false;
-      state.isAuthenticated = true;
-      state.requiresVerification = false;
-      state.tempUserId = null;
-      state.user = action.payload.user;
-      state.token = action.payload.authorization.token;
-    });
-    builder.addCase(verifyLoginCode.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Logout
-    builder.addCase(logout.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(logout.fulfilled, (state) => {
-      state.loading = false;
-      state.isAuthenticated = false;
-      state.user = null;
-      state.requiresVerification = false;
-      state.tempUserId = null;
-    });
-    builder.addCase(logout.rejected, (state) => {
-      state.loading = false;
-      // Logout anyway even if the API call fails
-      state.isAuthenticated = false;
-      state.user = null;
-    });
-
-    // Email Verification
+    // Verify email
     builder.addCase(verifyEmail.pending, (state) => {
       state.loading = true;
       state.error = null;
@@ -305,19 +231,89 @@ const authSlice = createSlice({
       state.error = action.payload as string;
     });
 
-    // Resend Login Code
-    builder.addCase(resendLoginCode.pending, (state) => {
-      // You could have a separate loading state for resending if needed
+    // Login user
+    builder.addCase(loginUser.pending, (state) => {
+      state.loading = true;
       state.error = null;
     });
-    builder.addCase(resendLoginCode.fulfilled, (state) => {
-      // No state changes needed on success, just the toast notification
+    builder.addCase(loginUser.fulfilled, (state, action) => {
+      state.loading = false;
+      // If login returns a token and user, set them in state
+      if (action.payload.user && action.payload.token) {
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.token;
+      }
+      // If requires verification, we don't update authentication state
     });
-    builder.addCase(resendLoginCode.rejected, (state, action) => {
+    builder.addCase(loginUser.rejected, (state, action) => {
+      state.loading = false;
+      state.isAuthenticated = false;
       state.error = action.payload as string;
+    });
+
+    // Verify login code
+    builder.addCase(verifyLoginCode.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(verifyLoginCode.fulfilled, (state, action) => {
+      state.loading = false;
+      if (action.payload.user && action.payload.token) {
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.token;
+      }
+    });
+    builder.addCase(verifyLoginCode.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Logout
+    builder.addCase(logout.pending, (state) => {
+      state.loading = true;
+    });
+    builder.addCase(logout.fulfilled, (state) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.accessToken = null;
+      state.loading = false;
+      state.error = null;
+    });
+    builder.addCase(logout.rejected, (state) => {
+      // Even if the API call fails, we want to log the user out on the client side
+      state.isAuthenticated = false;
+      state.user = null;
+      state.accessToken = null;
+      state.loading = false;
+    });
+
+    // Get user profile
+    builder.addCase(getUserProfile.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(getUserProfile.fulfilled, (state, action) => {
+      state.loading = false;
+      if (action.payload.data) {
+        state.user = action.payload.data;
+      }
+    });
+    builder.addCase(getUserProfile.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+      
+      // If the API call returns a 401 (Unauthorized), log the user out
+      if (axios.isAxiosError(action.payload) && action.payload.response?.status === 401) {
+        state.isAuthenticated = false;
+        state.user = null;
+        state.accessToken = null;
+      }
     });
   },
 });
 
-export const { clearAuthError, restoreAuth } = authSlice.actions;
+export const { setCredentials, clearCredentials } = authSlice.actions;
+
 export default authSlice.reducer;
