@@ -40,7 +40,7 @@ const ResetPasswordPage = () => {
     password_confirmation: yup.string()
       .required('Password confirmation is required')
       .oneOf([yup.ref('password')], 'Passwords must match'),
-  });
+  }) as yup.ObjectSchema<ResetPasswordFormData>;
 
   const form = useForm<ResetPasswordFormData>({
     resolver: yupResolver(schema),
@@ -54,7 +54,7 @@ const ResetPasswordPage = () => {
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
     try {
-      await dispatch(resetPassword(data));
+      await dispatch(resetPassword(data) as any);
       toast({
         title: 'Password reset successful',
         description: 'Your password has been reset successfully. You can now login with your new password.',

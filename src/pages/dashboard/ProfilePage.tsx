@@ -40,7 +40,7 @@ const ProfilePage = () => {
     state: yup.string().optional(),
     country: yup.string().optional(),
     profile_picture: yup.mixed().optional(),
-  });
+  }) as yup.ObjectSchema<ProfileFormData>;
 
   const form = useForm<ProfileFormData>({
     resolver: yupResolver(schema),

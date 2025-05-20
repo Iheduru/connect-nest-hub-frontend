@@ -33,7 +33,7 @@ const VerifyLoginCodePage = () => {
       .required('Verification code is required')
       .length(8, 'Verification code must be 8 digits')
       .matches(/^[0-9]+$/, 'Verification code must contain only numbers'),
-  });
+  }) as yup.ObjectSchema<VerifyLoginCodeFormData>;
 
   const form = useForm<VerifyLoginCodeFormData>({
     resolver: yupResolver(schema),
@@ -45,7 +45,7 @@ const VerifyLoginCodePage = () => {
 
   const onSubmit = async (data: VerifyLoginCodeFormData) => {
     try {
-      const resultAction = await dispatch(verifyLoginCode(data));
+      const resultAction = await dispatch(verifyLoginCode(data) as any);
 
       if (verifyLoginCode.fulfilled.match(resultAction)) {
         toast({
@@ -63,7 +63,7 @@ const VerifyLoginCodePage = () => {
     setIsResending(true);
     try {
       if (tempUserId) {
-        await dispatch(resendLoginCode(tempUserId));
+        await dispatch(resendLoginCode(tempUserId) as any);
         toast({
           title: 'Verification code resent',
           description: 'A new verification code has been sent to your email.',

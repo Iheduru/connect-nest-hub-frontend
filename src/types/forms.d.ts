@@ -14,7 +14,7 @@ export interface RegisterFormData {
   middle_name?: string;
   password: string;
   password_confirmation: string;
-  role: 'client' | 'host' | 'admin'; // Changed from string to specific values
+  role: 'client' | 'host' | 'admin';
 }
 
 export interface ForgotPasswordFormData {
@@ -40,7 +40,7 @@ export interface VerifyLoginCodeFormData {
 // Profile form types
 export interface ProfileFormData {
   middle_name?: string;
-  phone_number: string; // Required in the component
+  phone_number: string;
   alternative_email?: string;
   bio?: string;
   gender?: string;

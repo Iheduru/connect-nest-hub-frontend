@@ -52,7 +52,7 @@ const RegisterPage = () => {
     role: yup.string()
       .oneOf(['client', 'host', 'admin'] as const, 'Invalid role')
       .required('Role is required'),
-  });
+  }) as yup.ObjectSchema<RegisterFormData>;
 
   const form = useForm<RegisterFormData>({
     resolver: yupResolver(schema),
@@ -70,7 +70,7 @@ const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const resultAction = await dispatch(registerUser(data));
+      const resultAction = await dispatch(registerUser(data) as any);
       
       if (registerUser.fulfilled.match(resultAction)) {
         toast({
