@@ -9,16 +9,16 @@ const HomePage = () => {
     <div className="min-h-screen">
       {/* Hero Section */}
       <AnimatedContainer animation="fade-in" className="w-full">
-        <section className="bg-gradient-to-r from-indigo-600 to-blue-500 py-20">
+        <section className="bg-gradient-to-r from-indigo-600 to-blue-500 py-20 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <h1 className="text-4xl font-extrabold text-white sm:text-5xl md:text-6xl">
+              <h1 className="text-4xl font-extrabold text-white sm:text-5xl md:text-6xl tracking-tight">
                 Property Management <span className="block">Made Simple</span>
               </h1>
               <p className="mt-3 max-w-md mx-auto text-base text-indigo-100 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
                 A comprehensive platform for property listing and user management with secure authentication and verification.
               </p>
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 flex justify-center gap-4">
                 <div className="rounded-md shadow">
                   <Link
                     to="/register"
@@ -27,7 +27,7 @@ const HomePage = () => {
                     Get Started
                   </Link>
                 </div>
-                <div className="ml-3 rounded-md shadow">
+                <div className="rounded-md shadow">
                   <Link
                     to="/properties"
                     className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-gray-50 transition-all hover:scale-105 md:py-4 md:text-lg md:px-10"
@@ -42,7 +42,7 @@ const HomePage = () => {
       </AnimatedContainer>
 
       {/* Features Section */}
-      <section className="py-16">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedContainer animation="fade-in" delay={200} className="text-center">
             <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
@@ -53,10 +53,10 @@ const HomePage = () => {
             </p>
           </AnimatedContainer>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
+          <div className="mt-16 grid gap-8 md:grid-cols-3">
             {/* Feature 1 */}
             <AnimatedContainer animation="fade-in" delay={300}>
-              <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-1 duration-300 h-full">
+              <Card className="p-6 hover:shadow-xl transition-all hover:-translate-y-2 duration-300 h-full border border-gray-100">
                 <div className="rounded-full bg-brand-primary bg-opacity-10 p-3 w-12 h-12 flex items-center justify-center">
                   <svg
                     className="w-6 h-6 text-brand-primary"
@@ -73,8 +73,8 @@ const HomePage = () => {
                     />
                   </svg>
                 </div>
-                <h3 className="mt-4 text-lg font-medium text-gray-900">Secure Authentication</h3>
-                <p className="mt-2 text-base text-gray-500">
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">Secure Authentication</h3>
+                <p className="mt-3 text-base text-gray-500">
                   Multi-layered security with email verification and two-factor authentication for administrators.
                 </p>
               </Card>
@@ -82,7 +82,7 @@ const HomePage = () => {
 
             {/* Feature 2 */}
             <AnimatedContainer animation="fade-in" delay={400}>
-              <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-1 duration-300 h-full">
+              <Card className="p-6 hover:shadow-xl transition-all hover:-translate-y-2 duration-300 h-full border border-gray-100">
                 <div className="rounded-full bg-brand-secondary bg-opacity-10 p-3 w-12 h-12 flex items-center justify-center">
                   <svg
                     className="w-6 h-6 text-brand-secondary"
@@ -99,8 +99,8 @@ const HomePage = () => {
                     />
                   </svg>
                 </div>
-                <h3 className="mt-4 text-lg font-medium text-gray-900">KYC Verification</h3>
-                <p className="mt-2 text-base text-gray-500">
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">KYC Verification</h3>
+                <p className="mt-3 text-base text-gray-500">
                   Built-in Know Your Customer verification process with document upload and approval workflow.
                 </p>
               </Card>
@@ -108,7 +108,7 @@ const HomePage = () => {
 
             {/* Feature 3 */}
             <AnimatedContainer animation="fade-in" delay={500}>
-              <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-1 duration-300 h-full">
+              <Card className="p-6 hover:shadow-xl transition-all hover:-translate-y-2 duration-300 h-full border border-gray-100">
                 <div className="rounded-full bg-brand-success bg-opacity-10 p-3 w-12 h-12 flex items-center justify-center">
                   <svg
                     className="w-6 h-6 text-brand-success"
@@ -125,15 +125,15 @@ const HomePage = () => {
                     />
                   </svg>
                 </div>
-                <h3 className="mt-4 text-lg font-medium text-gray-900">Profile Management</h3>
-                <p className="mt-2 text-base text-gray-500">
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">Profile Management</h3>
+                <p className="mt-3 text-base text-gray-500">
                   Comprehensive user profile management with image uploads and public profile visibility.
                 </p>
               </Card>
             </AnimatedContainer>
           </div>
 
-          <AnimatedContainer animation="fade-in" delay={600} className="mt-12 text-center">
+          <AnimatedContainer animation="fade-in" delay={600} className="mt-16 text-center">
             <Link
               to="/about"
               className="inline-flex items-center text-brand-primary hover:text-brand-primary/80 font-medium transition-all hover:translate-x-1"
@@ -149,7 +149,7 @@ const HomePage = () => {
       <AnimatedContainer animation="fade-in" delay={700}>
         <section className="bg-gray-50 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-brand-primary rounded-lg shadow-xl overflow-hidden">
+            <div className="bg-brand-primary rounded-lg shadow-xl overflow-hidden transform hover:scale-[1.01] transition-transform duration-300">
               <div className="px-6 py-12 sm:px-12 lg:py-16 lg:px-16 lg:flex lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
@@ -160,7 +160,7 @@ const HomePage = () => {
                     Join our platform and experience seamless property management.
                   </p>
                 </div>
-                <div className="mt-8 lg:mt-0 lg:ml-8">
+                <div className="mt-8 lg:mt-0 lg:ml-8 space-y-4">
                   <div className="rounded-md shadow">
                     <Link
                       to="/register"
@@ -169,7 +169,7 @@ const HomePage = () => {
                       Register Now
                     </Link>
                   </div>
-                  <div className="mt-3 rounded-md shadow">
+                  <div className="rounded-md shadow">
                     <Link
                       to="/contact"
                       className="w-full flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-700 hover:bg-indigo-800 transition-all hover:scale-105"
