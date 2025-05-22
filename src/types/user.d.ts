@@ -87,6 +87,6 @@ export interface PublicProfile {
 export interface Pagination {
   current_page: number;
   total_pages: number;
-  total_items: number;
+  total: number;
   per_page: number;
 }

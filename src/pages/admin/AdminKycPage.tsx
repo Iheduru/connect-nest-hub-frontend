@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Search, Filter, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -281,7 +280,7 @@ const AdminKycPage = () => {
         {pagination && (
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-gray-500">
-              Showing {filteredSubmissions.length} of {pagination.total_items} submissions
+              Showing {filteredSubmissions.length} of {pagination.total} submissions
             </div>
             <div className="flex items-center space-x-2">
               <Button 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -204,7 +203,7 @@ const KycVerificationPage = () => {
               <FormField
                 control={form.control}
                 name="kyc_document"
-                render={({ field: { onChange, ...rest } }) => (
+                render={({ field: { onChange, value, ...rest } }) => (
                   <FormItem>
                     <FormLabel>Upload Document</FormLabel>
                     <FormControl>
@@ -215,7 +214,6 @@ const KycVerificationPage = () => {
                           id="kyc_document"
                           onChange={(e) => {
                             onFileChange(e);
-                            onChange(e.target.files?.[0]);
                           }}
                           {...rest}
                         />
