@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./store";
+import PageTransition from "./components/ui/page-transition";
 
 // Layouts
 import MainLayout from "./layouts/MainLayout";
@@ -13,6 +14,7 @@ import AuthLayout from "./layouts/AuthLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 
 // Public Pages
+import Index from "./pages/Index";
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
 import PropertiesPage from "./pages/PropertiesPage";
@@ -51,39 +53,106 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Index Route */}
+            <Route path="/" element={<Index />} />
+            
             {/* Public Routes */}
             <Route element={<MainLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/properties" element={<PropertiesPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/home" element={
+                <PageTransition>
+                  <HomePage />
+                </PageTransition>
+              } />
+              <Route path="/properties" element={
+                <PageTransition>
+                  <PropertiesPage />
+                </PageTransition>
+              } />
+              <Route path="/about" element={
+                <PageTransition>
+                  <AboutPage />
+                </PageTransition>
+              } />
+              <Route path="/contact" element={
+                <PageTransition>
+                  <ContactPage />
+                </PageTransition>
+              } />
             </Route>
 
             {/* Auth Routes */}
             <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/verify-login-code" element={<VerifyLoginCodePage />} />
+              <Route path="/login" element={
+                <PageTransition>
+                  <LoginPage />
+                </PageTransition>
+              } />
+              <Route path="/register" element={
+                <PageTransition>
+                  <RegisterPage />
+                </PageTransition>
+              } />
+              <Route path="/verify-email" element={
+                <PageTransition>
+                  <VerifyEmailPage />
+                </PageTransition>
+              } />
+              <Route path="/forgot-password" element={
+                <PageTransition>
+                  <ForgotPasswordPage />
+                </PageTransition>
+              } />
+              <Route path="/reset-password" element={
+                <PageTransition>
+                  <ResetPasswordPage />
+                </PageTransition>
+              } />
+              <Route path="/verify-login-code" element={
+                <PageTransition>
+                  <VerifyLoginCodePage />
+                </PageTransition>
+              } />
             </Route>
 
             {/* Protected Routes */}
             <Route element={<PrivateRoute />}>
               <Route element={<DashboardLayout />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/kyc-verification" element={<KycVerificationPage />} />
+                <Route path="/dashboard" element={
+                  <PageTransition>
+                    <DashboardPage />
+                  </PageTransition>
+                } />
+                <Route path="/profile" element={
+                  <PageTransition>
+                    <ProfilePage />
+                  </PageTransition>
+                } />
+                <Route path="/kyc-verification" element={
+                  <PageTransition>
+                    <KycVerificationPage />
+                  </PageTransition>
+                } />
               </Route>
             </Route>
 
             {/* Admin Routes */}
             <Route element={<AdminRoute />}>
               <Route element={<DashboardLayout />}>
-                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/kyc" element={<AdminKycPage />} />
+                <Route path="/admin/dashboard" element={
+                  <PageTransition>
+                    <AdminDashboardPage />
+                  </PageTransition>
+                } />
+                <Route path="/admin/users" element={
+                  <PageTransition>
+                    <AdminUsersPage />
+                  </PageTransition>
+                } />
+                <Route path="/admin/kyc" element={
+                  <PageTransition>
+                    <AdminKycPage />
+                  </PageTransition>
+                } />
               </Route>
             </Route>
 
