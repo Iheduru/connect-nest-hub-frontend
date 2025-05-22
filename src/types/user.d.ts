@@ -8,6 +8,8 @@ export interface User {
   email: string;
   role: 'client' | 'host' | 'admin';
   is_verified: boolean;
+  status?: 'active' | 'inactive';
+  account_type?: string;
   profile_picture?: string;
   created_at: string;
   updated_at: string;
@@ -39,6 +41,7 @@ export interface Profile {
   };
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export interface KycVerification {
@@ -49,4 +52,41 @@ export interface KycVerification {
   rejection_reason?: string;
   submitted_at: string;
   verified_at?: string;
+}
+
+export interface KycSubmission {
+  user_id: number;
+  username?: string;
+  email?: string;
+  kyc_status: 'pending' | 'approved' | 'rejected';
+  document_type: string;
+  submitted_at: string;
+  verified_at?: string;
+  rejection_reason?: string;
+}
+
+export interface PublicProfile {
+  id: number;
+  slug: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  profile_picture?: string;
+  bio?: string;
+  role?: string;
+  account_type?: string;
+  is_verified?: boolean;
+  social_links?: {
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+    facebook?: string;
+  };
+}
+
+export interface Pagination {
+  current_page: number;
+  total_pages: number;
+  total_items: number;
+  per_page: number;
 }

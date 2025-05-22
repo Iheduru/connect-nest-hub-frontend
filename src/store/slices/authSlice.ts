@@ -1,6 +1,8 @@
+
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { User } from '@/types/user';
+import { toast } from 'sonner';
 import { 
   LoginFormData, 
   RegisterFormData, 
@@ -10,13 +12,13 @@ import {
   VerifyLoginCodeFormData 
 } from '@/types/forms';
 import { axiosInstance } from '@/utils/axios';
+import { setAuthToken, removeAuthToken } from '@/utils/auth';
 
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
   error: string | null;
-  // Add these for login verification flow
   requiresVerification: boolean;
   tempUserId: number | null;
 }
@@ -29,6 +31,44 @@ const initialState: AuthState = {
   requiresVerification: false,
   tempUserId: null,
 };
+
+// Check username availability
+export const checkUsernameAvailability = createAsyncThunk(
+  'auth/checkUsername',
+  async (usernames: string[], { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/check/username', { usernames });
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          toast.error(`Too many requests. Please try again in ${error.response.data.retry_after} seconds.`);
+        }
+        return rejectWithValue(error.response?.data?.message || 'Failed to check username availability');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+// Check email availability
+export const checkEmailAvailability = createAsyncThunk(
+  'auth/checkEmail',
+  async (emails: string[], { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/check/email', { emails });
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          toast.error(`Too many requests. Please try again in ${error.response.data.retry_after} seconds.`);
+        }
+        return rejectWithValue(error.response?.data?.message || 'Failed to check email availability');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
 
 // Auth Async Thunks
 export const login = createAsyncThunk(
@@ -46,6 +86,10 @@ export const login = createAsyncThunk(
       }
       
       // Regular login success
+      if (response.data.data?.authorization?.token) {
+        setAuthToken(response.data.data.authorization.token);
+      }
+      
       return response.data.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -61,6 +105,7 @@ export const register = createAsyncThunk(
   async (userData: RegisterFormData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/register', userData);
+      toast.success('Registration successful. Please check your email for verification.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -76,6 +121,7 @@ export const verifyEmail = createAsyncThunk(
   async (verificationData: VerifyEmailFormData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/verify/email', verificationData);
+      toast.success('Email verified successfully. You can now log in.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -91,6 +137,7 @@ export const resendVerificationCode = createAsyncThunk(
   async (email: string, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/resend/verificationcode', { email });
+      toast.success('A new verification code has been sent to your email.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -106,10 +153,29 @@ export const forgotPassword = createAsyncThunk(
   async (emailData: ForgotPasswordFormData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/request/password/reset/verification', emailData);
+      toast.success('A verification code has been sent to your email.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(error.response?.data?.message || 'Failed to process forgot password request');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const verifyPasswordResetCode = createAsyncThunk(
+  'auth/verifyPasswordResetCode',
+  async ({ email, verification_code }: { email: string, verification_code: string }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/verify/password/reset/code', { 
+        email, 
+        verification_code 
+      });
+      return response.data.reset_token;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to verify reset code');
       }
       return rejectWithValue('An unexpected error occurred');
     }
@@ -121,6 +187,7 @@ export const resetPassword = createAsyncThunk(
   async (resetData: ResetPasswordFormData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/reset/password', resetData);
+      toast.success('Password reset successfully. You can now log in with your new password.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -136,7 +203,13 @@ export const verifyLoginCode = createAsyncThunk(
   async (verificationData: VerifyLoginCodeFormData, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/verify/login/code', verificationData);
-      return response.data.data;
+      
+      // Set token if auth is successful
+      if (response.data.data?.authorization?.token) {
+        setAuthToken(response.data.data.authorization.token);
+      }
+      
+      return response.data.data.user;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(error.response?.data?.message || 'Login code verification failed');
@@ -151,6 +224,7 @@ export const resendLoginCode = createAsyncThunk(
   async (userId: number, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/resend/login/code', { user_id: userId });
+      toast.success('A new verification code has been sent to your email.');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -161,16 +235,45 @@ export const resendLoginCode = createAsyncThunk(
   }
 );
 
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async ({ current_password, new_password, new_password_confirmation }: {
+    current_password: string,
+    new_password: string,
+    new_password_confirmation: string
+  }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post('/change-password', {
+        current_password,
+        new_password,
+        new_password_confirmation
+      });
+      toast.success('Password changed successfully.');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to change password');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post('/logout');
-      return response.data;
+      await axiosInstance.post('/logout');
+      removeAuthToken();
+      toast.success('Logged out successfully.');
+      return true;
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        // Still remove the token even if API call fails
+        removeAuthToken();
         return rejectWithValue(error.response?.data?.message || 'Logout failed');
       }
+      removeAuthToken();
       return rejectWithValue('An unexpected error occurred');
     }
   }
@@ -197,6 +300,27 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // Username/Email Availability
+    builder.addCase(checkUsernameAvailability.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(checkUsernameAvailability.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(checkUsernameAvailability.rejected, (state) => {
+      state.isLoading = false;
+    });
+    
+    builder.addCase(checkEmailAvailability.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(checkEmailAvailability.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(checkEmailAvailability.rejected, (state) => {
+      state.isLoading = false;
+    });
+
     // Login reducers
     builder.addCase(login.pending, (state) => {
       state.isLoading = true;
@@ -262,7 +386,7 @@ const authSlice = createSlice({
       state.error = action.payload as string;
     });
     
-    // Forgot password reducers
+    // Forgot password and verification reducers
     builder.addCase(forgotPassword.pending, (state) => {
       state.isLoading = true;
       state.error = null;
@@ -271,6 +395,18 @@ const authSlice = createSlice({
       state.isLoading = false;
     });
     builder.addCase(forgotPassword.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
+    builder.addCase(verifyPasswordResetCode.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(verifyPasswordResetCode.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(verifyPasswordResetCode.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
     });
@@ -318,11 +454,26 @@ const authSlice = createSlice({
       state.error = action.payload as string;
     });
     
+    // Change password reducers
+    builder.addCase(changePassword.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(changePassword.fulfilled, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(changePassword.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    
     // Logout reducers
     builder.addCase(logout.fulfilled, (state) => {
       state.isAuthenticated = false;
       state.user = null;
       state.error = null;
+      state.requiresVerification = false;
+      state.tempUserId = null;
     });
   },
 });

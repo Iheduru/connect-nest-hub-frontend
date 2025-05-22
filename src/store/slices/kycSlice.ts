@@ -1,6 +1,6 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
+import axios from '@/utils/axios';
 import { toast } from 'sonner';
 
 interface KycState {
@@ -10,6 +10,13 @@ interface KycState {
   rejectionReason: string | null;
   loading: boolean;
   error: string | null;
+  submissions: any[];
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    total: number;
+    per_page: number;
+  } | null;
 }
 
 export interface SubmitKycData {
@@ -30,6 +37,8 @@ const initialState: KycState = {
   rejectionReason: null,
   loading: false,
   error: null,
+  submissions: [],
+  pagination: null
 };
 
 // Get KYC Status
@@ -37,7 +46,7 @@ export const getKycStatus = createAsyncThunk(
   'kyc/status',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get('https://namph.connectnesthub.com/api/kyc/status');
+      const response = await axios.get('/kyc/status');
       return response.data.data;
     } catch (error: any) {
       const message = error.response?.data?.message || 'Failed to get KYC status';
@@ -56,7 +65,7 @@ export const submitKyc = createAsyncThunk(
       formData.append('kyc_document', data.kyc_document);
       formData.append('document_type', data.document_type);
       
-      const response = await axios.post('https://namph.connectnesthub.com/api/kyc/submit', formData, {
+      const response = await axios.post('/kyc/submit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -81,7 +90,7 @@ export const resubmitKyc = createAsyncThunk(
       formData.append('kyc_document', data.kyc_document);
       formData.append('document_type', data.document_type);
       
-      const response = await axios.post('https://namph.connectnesthub.com/api/kyc/resubmit', formData, {
+      const response = await axios.post('/kyc/resubmit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -97,12 +106,52 @@ export const resubmitKyc = createAsyncThunk(
   }
 );
 
+// Admin: List KYC submissions
+export const listKycSubmissions = createAsyncThunk(
+  'kyc/listSubmissions',
+  async (params: { status?: string; per_page?: number; page?: number } = {}, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (params.status) queryParams.append('status', params.status);
+      if (params.per_page) queryParams.append('per_page', String(params.per_page));
+      if (params.page) queryParams.append('page', String(params.page));
+      
+      const response = await axios.get(`/admin/kyc/list?${queryParams.toString()}`);
+      
+      return {
+        submissions: response.data.data.submissions,
+        pagination: response.data.data.pagination
+      };
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to list KYC submissions';
+      toast.error(message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Admin: Get KYC document
+export const getKycDocument = createAsyncThunk(
+  'kyc/getDocument',
+  async (userId: number, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/admin/kyc/document/${userId}`);
+      return response.data.data;
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to get KYC document';
+      toast.error(message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
 // Admin: Verify or reject KYC
 export const verifyKyc = createAsyncThunk(
   'kyc/verify',
   async ({ user_id, status, rejection_reason }: KycVerificationPayload, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`https://namph.connectnesthub.com/api/admin/kyc/${user_id}`, {
+      const response = await axios.patch(`/admin/kyc/${user_id}`, {
         status,
         rejection_reason,
       });
@@ -122,6 +171,9 @@ const kycSlice = createSlice({
   initialState,
   reducers: {
     resetKyc: () => initialState,
+    clearKycError: (state) => {
+      state.error = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -173,10 +225,53 @@ const kycSlice = createSlice({
       .addCase(resubmitKyc.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      
+      // Admin: List KYC submissions
+      .addCase(listKycSubmissions.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(listKycSubmissions.fulfilled, (state, action: PayloadAction<any>) => {
+        state.loading = false;
+        state.submissions = action.payload.submissions;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(listKycSubmissions.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      
+      // Admin: Get KYC document
+      .addCase(getKycDocument.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getKycDocument.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(getKycDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      
+      // Admin: Verify KYC
+      .addCase(verifyKyc.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyKyc.fulfilled, (state) => {
+        state.loading = false;
+        // The submissions list will need to be refreshed from the server
+        // after a verification action
+      })
+      .addCase(verifyKyc.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { resetKyc } = kycSlice.actions;
+export const { resetKyc, clearKycError } = kycSlice.actions;
 
 export default kycSlice.reducer;

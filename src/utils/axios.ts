@@ -67,6 +67,20 @@ axiosInstance.interceptors.response.use(
       toast.error(`Too many requests. Please try again in ${retryAfter} seconds.`);
     }
     
+    // Handle validation errors
+    if (error.response && error.response.status === 422) {
+      if (error.response.data.errors) {
+        // Format validation errors
+        Object.values(error.response.data.errors).forEach((messages: any) => {
+          if (Array.isArray(messages)) {
+            messages.forEach(message => toast.error(message));
+          }
+        });
+      } else if (error.response.data.message) {
+        toast.error(error.response.data.message);
+      }
+    }
+    
     return Promise.reject(error);
   }
 );

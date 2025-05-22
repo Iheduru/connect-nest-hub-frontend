@@ -1,20 +1,40 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { KycFormData } from '@/types/forms';
+import { RootState } from '@/store';
+import { getKycStatus, submitKyc, resubmitKyc } from '@/store/slices/kycSlice';
+import { Upload, FilePenLine, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from '@/components/ui/form';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 const allowedFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+const maxFileSize = 2 * 1024 * 1024; // 2MB
 
 const schema = yup.object({
   kyc_document: yup
     .mixed()
     .test('fileSize', 'The file is too large. Max size is 2MB', (value: any) => {
       if (!value || !value[0]) return true;
-      return value[0].size <= 2 * 1024 * 1024; // 2MB
+      return value[0].size <= maxFileSize;
     })
     .test('fileType', 'Only JPEG, PNG, and PDF files are allowed', (value: any) => {
       if (!value || !value[0]) return true;
@@ -25,45 +45,65 @@ const schema = yup.object({
 }).required();
 
 const KycVerificationPage = () => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [kycStatus, setKycStatus] = useState<'not_submitted' | 'pending' | 'approved' | 'rejected'>('not_submitted');
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset
-  } = useForm<KycFormData>({
+  const dispatch = useDispatch();
+  const { status, documentType, submittedAt, rejectionReason, loading } = useSelector((state: RootState) => state.kyc);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const form = useForm<KycFormData>({
     resolver: yupResolver(schema) as any,
+    defaultValues: {
+      document_type: '',
+    }
   });
+
+  useEffect(() => {
+    dispatch(getKycStatus() as any);
+  }, [dispatch]);
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      form.setValue('kyc_document', file as any);
+      setFileName(file.name);
+      
+      // Create preview if it's an image
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPreviewUrl(null);
+      }
+    }
+  };
   
   const onSubmit = async (data: KycFormData) => {
-    setIsSubmitting(true);
     try {
-      // Simulating API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (status === 'rejected') {
+        await dispatch(resubmitKyc(data) as any);
+      } else {
+        await dispatch(submitKyc(data) as any);
+      }
       
-      // Success scenario
-      toast({
-        title: "KYC Document Submitted",
-        description: "Your document has been uploaded and is pending verification.",
-      });
+      // Reset form after submission
+      form.reset();
+      setFileName(null);
+      setPreviewUrl(null);
       
-      // Update status
-      setKycStatus('pending');
-      
-      // Reset form
-      reset();
+      // Refresh KYC status
+      dispatch(getKycStatus() as any);
     } catch (error) {
-      toast({
-        title: "Submission Failed",
-        description: "There was an error submitting your document. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error("KYC submission error:", error);
     }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
   };
   
   return (
@@ -77,38 +117,50 @@ const KycVerificationPage = () => {
       </div>
       
       {/* Status Card */}
-      {kycStatus !== 'not_submitted' && (
+      {status !== 'not_submitted' && (
         <div className={`mb-8 p-4 rounded-md animate-fade-in ${
-          kycStatus === 'pending' ? 'bg-yellow-50 border border-yellow-200' :
-          kycStatus === 'approved' ? 'bg-green-50 border border-green-200' :
+          status === 'pending' ? 'bg-yellow-50 border border-yellow-200' :
+          status === 'approved' ? 'bg-green-50 border border-green-200' :
           'bg-red-50 border border-red-200'
         }`}>
           <div className="flex items-start">
             <div className={`rounded-full p-2 mr-3 ${
-              kycStatus === 'pending' ? 'bg-yellow-100 text-yellow-600' :
-              kycStatus === 'approved' ? 'bg-green-100 text-green-600' :
+              status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+              status === 'approved' ? 'bg-green-100 text-green-600' :
               'bg-red-100 text-red-600'
             }`}>
-              {kycStatus === 'pending' ? '⏳' :
-              kycStatus === 'approved' ? '✅' :
-              '❌'}
+              {status === 'pending' ? <Clock className="h-5 w-5" /> :
+              status === 'approved' ? <CheckCircle className="h-5 w-5" /> :
+              <AlertTriangle className="h-5 w-5" />}
             </div>
             <div>
               <h3 className="font-bold mb-1">
-                {kycStatus === 'pending' ? 'Verification Pending' :
-                kycStatus === 'approved' ? 'Verification Approved' :
+                {status === 'pending' ? 'Verification Pending' :
+                status === 'approved' ? 'Verification Approved' :
                 'Verification Rejected'}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {kycStatus === 'pending' ? 'Your document is being reviewed by our team. This usually takes 1-2 business days.' :
-                kycStatus === 'approved' ? 'Your identity has been verified. You now have full access to all features.' :
+                {status === 'pending' ? 'Your document is being reviewed by our team. This usually takes 1-2 business days.' :
+                status === 'approved' ? 'Your identity has been verified. You now have full access to all features.' :
                 'Your document was rejected. Please check the reasons below and resubmit.'}
               </p>
               
-              {kycStatus === 'rejected' && (
+              {submittedAt && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Submitted: {formatDate(submittedAt)}
+                </p>
+              )}
+              
+              {documentType && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Document type: {documentType}
+                </p>
+              )}
+              
+              {status === 'rejected' && rejectionReason && (
                 <div className="mt-2 p-3 bg-white rounded border border-red-100">
                   <h4 className="text-sm font-bold mb-1">Rejection Reason:</h4>
-                  <p className="text-sm">Document image is not clear enough. Please upload a higher quality image.</p>
+                  <p className="text-sm">{rejectionReason}</p>
                 </div>
               )}
             </div>
@@ -116,70 +168,111 @@ const KycVerificationPage = () => {
         </div>
       )}
       
-      {/* Resubmission form for rejected status or initial submission */}
-      {(kycStatus === 'not_submitted' || kycStatus === 'rejected') && (
+      {/* Submission/Resubmission form */}
+      {(status === 'not_submitted' || status === 'rejected') && (
         <div className="bg-white p-6 rounded-lg border animate-fade-in">
           <h2 className="text-xl font-bold mb-4">
-            {kycStatus === 'rejected' ? 'Resubmit Verification Document' : 'Submit Verification Document'}
+            {status === 'rejected' ? 'Resubmit Verification Document' : 'Submit Verification Document'}
           </h2>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Document Type</label>
-              <select
-                {...register('document_type')}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary"
-              >
-                <option value="">Select document type</option>
-                <option value="passport">Passport</option>
-                <option value="national_id">National ID Card</option>
-                <option value="drivers_license">Driver's License</option>
-                <option value="residence_permit">Residence Permit</option>
-              </select>
-              {errors.document_type && (
-                <p className="text-red-600 text-sm">{errors.document_type.message}</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Upload Document</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
-                <input
-                  type="file"
-                  {...register('kyc_document')}
-                  className="hidden"
-                  id="kyc_document"
-                />
-                <label 
-                  htmlFor="kyc_document" 
-                  className="cursor-pointer text-brand-primary hover:text-brand-primary/80 block"
-                >
-                  <div className="space-y-2">
-                    <div className="mx-auto h-12 w-12 text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
-                    <span className="block text-sm font-medium">
-                      Click to upload or drag and drop
-                    </span>
-                    <span className="block text-xs text-gray-500">
-                      JPEG, PNG or PDF (max 2MB)
-                    </span>
-                  </div>
-                </label>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="document_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Document Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select document type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="passport">Passport</SelectItem>
+                        <SelectItem value="national_id">National ID Card</SelectItem>
+                        <SelectItem value="drivers_license">Driver's License</SelectItem>
+                        <SelectItem value="residence_permit">Residence Permit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="kyc_document"
+                render={({ field: { onChange, ...rest } }) => (
+                  <FormItem>
+                    <FormLabel>Upload Document</FormLabel>
+                    <FormControl>
+                      <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+                        <input
+                          type="file"
+                          className="hidden"
+                          id="kyc_document"
+                          onChange={(e) => {
+                            onFileChange(e);
+                            onChange(e.target.files?.[0]);
+                          }}
+                          {...rest}
+                        />
+                        <label 
+                          htmlFor="kyc_document" 
+                          className="cursor-pointer text-brand-primary hover:text-brand-primary/80 block"
+                        >
+                          {fileName ? (
+                            <div className="space-y-2">
+                              <div className="mx-auto h-12 w-12 text-primary">
+                                <FilePenLine className="h-12 w-12 mx-auto" />
+                              </div>
+                              <span className="block text-sm font-medium">
+                                {fileName}
+                              </span>
+                              <span className="block text-xs text-primary">
+                                Click to change file
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="mx-auto h-12 w-12 text-gray-400">
+                                <Upload className="h-12 w-12 mx-auto" />
+                              </div>
+                              <span className="block text-sm font-medium">
+                                Click to upload or drag and drop
+                              </span>
+                              <span className="block text-xs text-gray-500">
+                                JPEG, PNG or PDF (max 2MB)
+                              </span>
+                            </div>
+                          )}
+                        </label>
+                        
+                        {previewUrl && (
+                          <div className="mt-4">
+                            <img 
+                              src={previewUrl} 
+                              alt="Document preview" 
+                              className="max-h-40 mx-auto object-contain rounded-md"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="pt-4">
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Submitting...' : status === 'rejected' ? 'Resubmit Document' : 'Submit Document'}
+                </Button>
               </div>
-              {errors.kyc_document && (
-                <p className="text-red-600 text-sm">{errors.kyc_document.message}</p>
-              )}
-            </div>
-            
-            <div className="pt-4">
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? 'Submitting...' : kycStatus === 'rejected' ? 'Resubmit Document' : 'Submit Document'}
-              </Button>
-            </div>
-          </form>
+            </form>
+          </Form>
         </div>
       )}
       
