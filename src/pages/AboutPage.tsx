@@ -83,7 +83,7 @@ const AboutPage = () => {
       </div>
       
       {/* Story & Timeline */}
-      <div className="mb-16 animate-fade-in [animation-delay:800ms]">
+      <div className="animate-fade-in [animation-delay:800ms]">
         <h2 className="text-2xl font-bold mb-8 text-center">Our Journey</h2>
         <div className="space-y-8 relative before:content-[''] before:absolute before:left-1/2 before:-ml-0.5 before:w-0.5 before:h-full before:bg-gray-200">
           <div className="relative pl-8 md:ml-[50%]">
@@ -132,36 +132,6 @@ const AboutPage = () => {
               <h3 className="text-lg font-bold mb-2">The Future</h3>
               <p className="text-muted-foreground">Continuously innovating to provide the best property platform experience.</p>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Team */}
-      <div className="animate-fade-in [animation-delay:1000ms]">
-        <h2 className="text-2xl font-bold mb-8 text-center">Our Leadership Team</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="text-center hover-scale">
-            <div className="h-40 w-40 mx-auto rounded-full overflow-hidden mb-4">
-              <img src="https://source.unsplash.com/photo-1582562124811-c09040d0a901" alt="Team Member" className="w-full h-full object-cover" />
-            </div>
-            <h3 className="text-xl font-bold">Jane Smith</h3>
-            <p className="text-brand-primary">CEO & Founder</p>
-          </div>
-          
-          <div className="text-center hover-scale">
-            <div className="h-40 w-40 mx-auto rounded-full overflow-hidden mb-4">
-              <img src="https://source.unsplash.com/photo-1618160702438-9b02ab6515c9" alt="Team Member" className="w-full h-full object-cover" />
-            </div>
-            <h3 className="text-xl font-bold">John Davis</h3>
-            <p className="text-brand-primary">CTO</p>
-          </div>
-          
-          <div className="text-center hover-scale">
-            <div className="h-40 w-40 mx-auto rounded-full overflow-hidden mb-4">
-              <img src="https://source.unsplash.com/photo-1721322800607-8c38375eef04" alt="Team Member" className="w-full h-full object-cover" />
-            </div>
-            <h3 className="text-xl font-bold">Sarah Johnson</h3>
-            <p className="text-brand-primary">Head of Operations</p>
           </div>
         </div>
       </div>
