@@ -4,12 +4,12 @@ import { toast } from 'sonner';
 import { getAuthToken, removeAuthToken } from './auth';
 import { store } from '@/store';
 import { logout } from '@/store/slices/authSlice';
-
-const API_URL = 'https://namph.connectnesthub.com/api';
+import { API_CONFIG } from '@/config/api';
 
 // Create axios instance
 export const axiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
