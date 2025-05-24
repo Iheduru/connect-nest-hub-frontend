@@ -54,7 +54,7 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md animate-fade-in">
+    <div className="max-w-md w-full mx-auto p-6 animate-fade-in">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">Forgot Password</h1>
         <p className="text-muted-foreground mt-2">Enter your email to reset your password</p>
