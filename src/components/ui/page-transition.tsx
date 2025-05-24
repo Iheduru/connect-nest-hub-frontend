@@ -15,6 +15,9 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   const { animationsEnabled, reducedMotion } = useSelector((state: RootState) => state.ui);
   
   useEffect(() => {
+    // Scroll to top when location changes
+    window.scrollTo(0, 0);
+    
     // Skip animation if we're on the index page or animations are disabled
     if (location.pathname === "/" || !animationsEnabled || reducedMotion) {
       setDisplayChildren(children);
