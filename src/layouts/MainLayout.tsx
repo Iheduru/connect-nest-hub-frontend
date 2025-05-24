@@ -23,9 +23,7 @@ const MainLayout = () => {
     <div className={`flex flex-col min-h-screen ${animationsEnabled ? 'animate-fade-in' : ''}`}>
       <Navbar />
       <main className="flex-grow">
-        <div className={`container mx-auto px-4 py-8 ${animationsEnabled ? 'animate-fade-in' : ''}`}>
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
       <Footer />
     </div>

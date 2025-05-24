@@ -53,11 +53,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Index Route */}
-            <Route path="/" element={<Index />} />
-            
-            {/* Public Routes */}
+            {/* Public Routes with MainLayout (includes navbar) */}
             <Route element={<MainLayout />}>
+              <Route path="/" element={
+                <PageTransition>
+                  <HomePage />
+                </PageTransition>
+              } />
               <Route path="/home" element={
                 <PageTransition>
                   <HomePage />
